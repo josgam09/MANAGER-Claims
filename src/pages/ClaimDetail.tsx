@@ -30,12 +30,21 @@ const ClaimDetail = () => {
     );
   }
 
-  const categoryLabels = {
-    product: 'Producto',
-    service: 'Servicio',
-    billing: 'Facturación',
-    technical: 'Técnico',
-    other: 'Otro',
+  const claimTypeLabels = {
+    compensacion: 'Compensación',
+    reembolso: 'Reembolso',
+    informacion: 'Información',
+    queja: 'Queja',
+    otro: 'Otro',
+  };
+
+  const reasonLabels = {
+    demora: 'Demora',
+    cancelacion: 'Cancelación',
+    equipaje: 'Equipaje',
+    'servicio-bordo': 'Servicio a Bordo',
+    personal: 'Personal',
+    otro: 'Otro',
   };
 
   return (
@@ -56,7 +65,7 @@ const ClaimDetail = () => {
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-2">
-                  <CardTitle className="text-2xl">{claim.title}</CardTitle>
+                  <CardTitle className="text-2xl">{claim.emailSubject}</CardTitle>
                   <div className="flex flex-wrap items-center gap-2">
                     <ClaimStatusBadge status={claim.status} />
                     <ClaimPriorityBadge priority={claim.priority} />
@@ -65,15 +74,49 @@ const ClaimDetail = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-semibold mb-2">Descripción</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{claim.description}</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <h3 className="font-semibold mb-2">N° Reclamo Organismo</h3>
+                  <p className="text-muted-foreground">{claim.organizationClaimNumber || 'N/A'}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">Tipo Claims</h3>
+                  <p className="text-muted-foreground">{claimTypeLabels[claim.claimType]}</p>
+                </div>
+              </div>
+              <Separator />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <h3 className="font-semibold mb-2">Organismo</h3>
+                  <p className="text-muted-foreground">{claim.organization || 'N/A'}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">PNR</h3>
+                  <p className="text-muted-foreground">{claim.pnr || 'N/A'}</p>
+                </div>
               </div>
               <Separator />
               <div>
-                <h3 className="font-semibold mb-2">Categoría</h3>
-                <p className="text-muted-foreground">{categoryLabels[claim.category]}</p>
+                <h3 className="font-semibold mb-2">Motivo</h3>
+                <p className="text-muted-foreground">{reasonLabels[claim.reason]}</p>
+                {claim.subReason && (
+                  <p className="text-sm text-muted-foreground mt-1">Sub motivo: {claim.subReason}</p>
+                )}
               </div>
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-2">Detalle del Reclamo</h3>
+                <p className="text-muted-foreground whitespace-pre-wrap">{claim.customerClaimDetail}</p>
+              </div>
+              {claim.informationRequest && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-semibold mb-2">Solicitud de Información</h3>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{claim.informationRequest}</p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -121,23 +164,32 @@ const ClaimDetail = () => {
               <div className="flex items-center gap-3">
                 <User className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Nombre</p>
-                  <p className="font-medium">{claim.customerName}</p>
+                  <p className="text-sm text-muted-foreground">Nombre del Reclamante</p>
+                  <p className="font-medium">{claim.claimantName}</p>
                 </div>
               </div>
+              {claim.identityDocument && (
+                <div className="flex items-center gap-3">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cédula de Identidad</p>
+                    <p className="font-medium">{claim.identityDocument}</p>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium break-all">{claim.customerEmail}</p>
+                  <p className="font-medium break-all">{claim.email}</p>
                 </div>
               </div>
-              {claim.customerPhone && (
+              {claim.phone && (
                 <div className="flex items-center gap-3">
                   <Phone className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Teléfono</p>
-                    <p className="font-medium">{claim.customerPhone}</p>
+                    <p className="font-medium">{claim.phone}</p>
                   </div>
                 </div>
               )}
@@ -152,7 +204,16 @@ const ClaimDetail = () => {
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Fecha de Creación</p>
+                  <p className="text-sm text-muted-foreground">Fecha Inicial del Reclamo</p>
+                  <p className="font-medium">
+                    {new Date(claim.initialDate).toLocaleString('es-AR')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Fecha de Creación en Sistema</p>
                   <p className="font-medium">
                     {new Date(claim.createdAt).toLocaleString('es-AR')}
                   </p>

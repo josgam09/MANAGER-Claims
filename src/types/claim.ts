@@ -1,6 +1,7 @@
 export type ClaimStatus = 'new' | 'in-progress' | 'resolved' | 'closed';
 export type ClaimPriority = 'low' | 'medium' | 'high' | 'critical';
-export type ClaimCategory = 'product' | 'service' | 'billing' | 'technical' | 'other';
+export type ClaimType = 'compensacion' | 'reembolso' | 'informacion' | 'queja' | 'otro';
+export type ClaimReason = 'demora' | 'cancelacion' | 'equipaje' | 'servicio-bordo' | 'personal' | 'otro';
 
 export interface ClaimHistory {
   id: string;
@@ -12,14 +13,22 @@ export interface ClaimHistory {
 
 export interface Claim {
   id: string;
-  title: string;
-  description: string;
+  emailSubject: string;
+  organizationClaimNumber: string;
+  claimType: ClaimType;
+  organization: string;
+  claimantName: string;
+  identityDocument: string;
+  email: string;
+  phone: string;
+  reason: ClaimReason;
+  subReason: string;
+  customerClaimDetail: string;
+  informationRequest: string;
+  pnr: string;
+  initialDate: Date;
   status: ClaimStatus;
   priority: ClaimPriority;
-  category: ClaimCategory;
-  customerName: string;
-  customerEmail: string;
-  customerPhone?: string;
   assignedTo?: string;
   createdAt: Date;
   updatedAt: Date;

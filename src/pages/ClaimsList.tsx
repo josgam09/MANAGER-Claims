@@ -26,9 +26,11 @@ const ClaimsList = () => {
   const filteredClaims = useMemo(() => {
     return claims.filter((claim) => {
       const matchesSearch =
-        claim.title.toLowerCase().includes(search.toLowerCase()) ||
-        claim.customerName.toLowerCase().includes(search.toLowerCase()) ||
-        claim.description.toLowerCase().includes(search.toLowerCase());
+        claim.emailSubject.toLowerCase().includes(search.toLowerCase()) ||
+        claim.claimantName.toLowerCase().includes(search.toLowerCase()) ||
+        claim.customerClaimDetail.toLowerCase().includes(search.toLowerCase()) ||
+        claim.organizationClaimNumber.toLowerCase().includes(search.toLowerCase()) ||
+        claim.pnr.toLowerCase().includes(search.toLowerCase());
       
       const matchesStatus = statusFilter === 'all' || claim.status === statusFilter;
       const matchesPriority = priorityFilter === 'all' || claim.priority === priorityFilter;
@@ -38,17 +40,24 @@ const ClaimsList = () => {
   }, [claims, search, statusFilter, priorityFilter]);
 
   const exportToCSV = () => {
-    const headers = ['ID', 'Título', 'Estado', 'Prioridad', 'Categoría', 'Cliente', 'Email', 'Teléfono', 'Asignado a', 'Fecha Creación', 'Última Actualización'];
+    const headers = ['ID', 'Asunto', 'N° Reclamo Organismo', 'Tipo Claims', 'Organismo', 'Reclamante', 'RUT/DNI', 'Email', 'Teléfono', 'Motivo', 'Sub Motivo', 'PNR', 'Estado', 'Prioridad', 'Asignado a', 'Fecha Inicial', 'Fecha Creación', 'Última Actualización'];
     const rows = filteredClaims.map(claim => [
       claim.id,
-      claim.title,
+      claim.emailSubject,
+      claim.organizationClaimNumber || '',
+      claim.claimType,
+      claim.organization || '',
+      claim.claimantName,
+      claim.identityDocument || '',
+      claim.email,
+      claim.phone || '',
+      claim.reason,
+      claim.subReason || '',
+      claim.pnr || '',
       claim.status,
       claim.priority,
-      claim.category,
-      claim.customerName,
-      claim.customerEmail,
-      claim.customerPhone || '',
       claim.assignedTo || '',
+      new Date(claim.initialDate).toLocaleDateString('es-AR'),
       new Date(claim.createdAt).toLocaleString('es-AR'),
       new Date(claim.updatedAt).toLocaleString('es-AR'),
     ]);
@@ -159,16 +168,22 @@ const ClaimsList = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold">{claim.title}</h3>
+                        <h3 className="font-semibold">{claim.emailSubject}</h3>
                       </div>
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {claim.description}
+                        {claim.customerClaimDetail}
                       </p>
                       <div className="flex flex-wrap items-center gap-2 text-sm">
                         <ClaimStatusBadge status={claim.status} />
                         <ClaimPriorityBadge priority={claim.priority} />
                         <span className="text-muted-foreground">•</span>
-                        <span className="text-muted-foreground">{claim.customerName}</span>
+                        <span className="text-muted-foreground">{claim.claimantName}</span>
+                        {claim.pnr && (
+                          <>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-muted-foreground">PNR: {claim.pnr}</span>
+                          </>
+                        )}
                         {claim.assignedTo && (
                           <>
                             <span className="text-muted-foreground">•</span>
@@ -178,7 +193,7 @@ const ClaimsList = () => {
                       </div>
                     </div>
                     <div className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                      <div>{new Date(claim.createdAt).toLocaleDateString('es-AR')}</div>
+                      <div>{new Date(claim.initialDate).toLocaleDateString('es-AR')}</div>
                       <div className="text-xs mt-1">
                         {new Date(claim.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                       </div>

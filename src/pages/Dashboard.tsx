@@ -172,21 +172,21 @@ const Dashboard = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold truncate">{claim.title}</h3>
+                      <h3 className="font-semibold truncate">{claim.emailSubject}</h3>
                     </div>
                     <p className="text-sm text-muted-foreground truncate mb-2">
-                      {claim.description}
+                      {claim.customerClaimDetail}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <ClaimStatusBadge status={claim.status} />
                       <ClaimPriorityBadge priority={claim.priority} />
                       <span className="text-xs text-muted-foreground">
-                        {claim.customerName}
+                        {claim.claimantName}
                       </span>
                     </div>
                   </div>
                   <div className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                    {new Date(claim.createdAt).toLocaleDateString('es-AR')}
+                    {new Date(claim.initialDate).toLocaleDateString('es-AR')}
                   </div>
                 </div>
               </Link>

@@ -13,9 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft } from 'lucide-react';
-import { ClaimStatus, ClaimPriority, ClaimCategory } from '@/types/claim';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { ArrowLeft, CalendarIcon } from 'lucide-react';
+import { ClaimStatus, ClaimPriority, ClaimType, ClaimReason } from '@/types/claim';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const ClaimForm = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,14 +29,22 @@ const ClaimForm = () => {
   const isEditing = !!id;
 
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
+    emailSubject: '',
+    organizationClaimNumber: '',
+    claimType: 'compensacion' as ClaimType,
+    organization: '',
+    claimantName: '',
+    identityDocument: '',
+    email: '',
+    phone: '',
+    reason: 'otro' as ClaimReason,
+    subReason: '',
+    customerClaimDetail: '',
+    informationRequest: '',
+    pnr: '',
+    initialDate: new Date(),
     status: 'new' as ClaimStatus,
     priority: 'medium' as ClaimPriority,
-    category: 'other' as ClaimCategory,
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
     assignedTo: '',
   });
 
@@ -40,14 +53,22 @@ const ClaimForm = () => {
       const claim = getClaim(id);
       if (claim) {
         setFormData({
-          title: claim.title,
-          description: claim.description,
+          emailSubject: claim.emailSubject,
+          organizationClaimNumber: claim.organizationClaimNumber,
+          claimType: claim.claimType,
+          organization: claim.organization,
+          claimantName: claim.claimantName,
+          identityDocument: claim.identityDocument,
+          email: claim.email,
+          phone: claim.phone,
+          reason: claim.reason,
+          subReason: claim.subReason,
+          customerClaimDetail: claim.customerClaimDetail,
+          informationRequest: claim.informationRequest,
+          pnr: claim.pnr,
+          initialDate: claim.initialDate,
           status: claim.status,
           priority: claim.priority,
-          category: claim.category,
-          customerName: claim.customerName,
-          customerEmail: claim.customerEmail,
-          customerPhone: claim.customerPhone || '',
           assignedTo: claim.assignedTo || '',
         });
       }
@@ -57,7 +78,7 @@ const ClaimForm = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.description || !formData.customerName || !formData.customerEmail) {
+    if (!formData.emailSubject || !formData.claimantName || !formData.email || !formData.customerClaimDetail) {
       toast.error('Por favor complete todos los campos requeridos');
       return;
     }
@@ -91,27 +112,210 @@ const ClaimForm = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Título *</Label>
+                <Label htmlFor="emailSubject">Asunto del Correo *</Label>
                 <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Breve descripción del reclamo"
+                  id="emailSubject"
+                  value={formData.emailSubject}
+                  onChange={(e) => setFormData({ ...formData, emailSubject: e.target.value })}
+                  placeholder="Asunto del correo del reclamo"
+                  required
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="organizationClaimNumber">N° Reclamo Organismo</Label>
+                  <Input
+                    id="organizationClaimNumber"
+                    value={formData.organizationClaimNumber}
+                    onChange={(e) => setFormData({ ...formData, organizationClaimNumber: e.target.value })}
+                    placeholder="Número de reclamo en el organismo"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="claimType">Tipo Claims</Label>
+                  <Select
+                    value={formData.claimType}
+                    onValueChange={(value) => setFormData({ ...formData, claimType: value as ClaimType })}
+                  >
+                    <SelectTrigger id="claimType">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="compensacion">Compensación</SelectItem>
+                      <SelectItem value="reembolso">Reembolso</SelectItem>
+                      <SelectItem value="informacion">Información</SelectItem>
+                      <SelectItem value="queja">Queja</SelectItem>
+                      <SelectItem value="otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="organization">Organismo</Label>
+                <Input
+                  id="organization"
+                  value={formData.organization}
+                  onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                  placeholder="Nombre del organismo"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Información del Reclamante</h3>
+              
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="claimantName">Nombre del Reclamante *</Label>
+                  <Input
+                    id="claimantName"
+                    value={formData.claimantName}
+                    onChange={(e) => setFormData({ ...formData, claimantName: e.target.value })}
+                    placeholder="Nombre completo"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="identityDocument">Cédula de Identidad (RUT-DNI)</Label>
+                  <Input
+                    id="identityDocument"
+                    value={formData.identityDocument}
+                    onChange={(e) => setFormData({ ...formData, identityDocument: e.target.value })}
+                    placeholder="12345678-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="email@ejemplo.com"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">N° Teléfono</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+54 11 1234-5678"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Detalles del Reclamo</h3>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Motivos</Label>
+                  <Select
+                    value={formData.reason}
+                    onValueChange={(value) => setFormData({ ...formData, reason: value as ClaimReason })}
+                  >
+                    <SelectTrigger id="reason">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="demora">Demora</SelectItem>
+                      <SelectItem value="cancelacion">Cancelación</SelectItem>
+                      <SelectItem value="equipaje">Equipaje</SelectItem>
+                      <SelectItem value="servicio-bordo">Servicio a Bordo</SelectItem>
+                      <SelectItem value="personal">Personal</SelectItem>
+                      <SelectItem value="otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="subReason">Sub Motivos</Label>
+                  <Input
+                    id="subReason"
+                    value={formData.subReason}
+                    onChange={(e) => setFormData({ ...formData, subReason: e.target.value })}
+                    placeholder="Especifique el sub motivo"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customerClaimDetail">Detalle del Reclamo del Cliente *</Label>
+                <Textarea
+                  id="customerClaimDetail"
+                  value={formData.customerClaimDetail}
+                  onChange={(e) => setFormData({ ...formData, customerClaimDetail: e.target.value })}
+                  placeholder="Describa en detalle el reclamo del cliente..."
+                  rows={5}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Descripción Detallada *</Label>
+                <Label htmlFor="informationRequest">Solicitud de Información</Label>
                 <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describa el reclamo en detalle..."
-                  rows={5}
-                  required
+                  id="informationRequest"
+                  value={formData.informationRequest}
+                  onChange={(e) => setFormData({ ...formData, informationRequest: e.target.value })}
+                  placeholder="Información adicional solicitada..."
+                  rows={3}
                 />
               </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="pnr">PNR</Label>
+                  <Input
+                    id="pnr"
+                    value={formData.pnr}
+                    onChange={(e) => setFormData({ ...formData, pnr: e.target.value })}
+                    placeholder="Código PNR"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="initialDate">Fecha Inicial que se Generó el Reclamo</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formData.initialDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.initialDate ? format(formData.initialDate, "PPP", { locale: es }) : "Seleccione una fecha"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.initialDate}
+                        onSelect={(date) => date && setFormData({ ...formData, initialDate: date })}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Estado y Gestión</h3>
 
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
@@ -148,67 +352,6 @@ const ClaimForm = () => {
                       <SelectItem value="critical">Crítica</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="category">Categoría</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value as ClaimCategory })}
-                  >
-                    <SelectTrigger id="category">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="product">Producto</SelectItem>
-                      <SelectItem value="service">Servicio</SelectItem>
-                      <SelectItem value="billing">Facturación</SelectItem>
-                      <SelectItem value="technical">Técnico</SelectItem>
-                      <SelectItem value="other">Otro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Información del Cliente</h3>
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="customerName">Nombre Completo *</Label>
-                  <Input
-                    id="customerName"
-                    value={formData.customerName}
-                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                    placeholder="Nombre del cliente"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="customerEmail">Email *</Label>
-                  <Input
-                    id="customerEmail"
-                    type="email"
-                    value={formData.customerEmail}
-                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                    placeholder="email@ejemplo.com"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="customerPhone">Teléfono</Label>
-                  <Input
-                    id="customerPhone"
-                    type="tel"
-                    value={formData.customerPhone}
-                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                    placeholder="+54 11 1234-5678"
-                  />
                 </div>
 
                 <div className="space-y-2">
