@@ -28,8 +28,8 @@ const generateClaimNumber = (claims: Claim[]): string => {
   // Obtener el siguiente número secuencial
   const nextNumber = currentYearClaims.length + 1;
   
-  // Formatear con 8 dígitos
-  const paddedNumber = nextNumber.toString().padStart(8, '0');
+  // Formatear con 4 dígitos (capacidad: 9,999 reclamos/año)
+  const paddedNumber = nextNumber.toString().padStart(4, '0');
   
   return `NIC-${paddedNumber}-${currentYear}`;
 };
@@ -40,7 +40,7 @@ const ClaimContext = createContext<ClaimContextType | undefined>(undefined);
 const mockClaims: Claim[] = [
   {
     id: '1',
-    claimNumber: 'NIC-00000001-2025',
+    claimNumber: 'NIC-0001-2025',
     country: 'AR',
     emailSubject: 'Vuelo cancelado sin previo aviso',
     organizationClaimNumber: 'ORG-2025-001',
@@ -80,7 +80,7 @@ const mockClaims: Claim[] = [
   },
   {
     id: '2',
-    claimNumber: 'NIC-00000002-2025',
+    claimNumber: 'NIC-0002-2025',
     country: 'CL',
     emailSubject: 'Equipaje extraviado en vuelo internacional',
     organizationClaimNumber: 'ORG-2025-002',
@@ -109,7 +109,7 @@ const mockClaims: Claim[] = [
   },
   {
     id: '3',
-    claimNumber: 'NIC-00000003-2025',
+    claimNumber: 'NIC-0003-2025',
     country: 'PE',
     emailSubject: 'Demora prolongada en vuelo',
     organizationClaimNumber: 'ORG-2025-003',
