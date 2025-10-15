@@ -162,7 +162,7 @@ const ClaimForm = () => {
                   {isEditing ? 'NIC' : 'NIC (será asignado)'}
                 </Label>
                 <p className="text-xl font-bold text-primary mt-1 font-mono">
-                  {isEditing && id ? (getClaim(id)?.claimNumber || 'N/A') : (getNextClaimNumber() || 'NIC-00000001-2025')}
+                  {isEditing && id ? (getClaim(id)?.claimNumber || 'N/A') : (getNextClaimNumber() || 'NIC-0001-2025')}
                 </p>
               </div>
 

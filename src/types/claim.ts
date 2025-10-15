@@ -253,7 +253,7 @@ export interface ClaimHistory {
 
 export interface Claim {
   id: string;
-  claimNumber: string; // Número único NIC-00000001-2025
+  claimNumber: string; // Número único NIC-0001-2025
   country: Country; // País de origen del reclamo
   emailSubject: string;
   organizationClaimNumber: string;
