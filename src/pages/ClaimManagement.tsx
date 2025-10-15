@@ -482,8 +482,10 @@ const ClaimManagement = () => {
                 </div>
               </div>
 
-              {/* CAMPOS DE VUELO - Aparecen si hay PNR válido o si el motivo es Equipaje */}
-              {((formData.pnr && validatePNR(formData.pnr)) || formData.reason === 'Equipaje') && (
+              {/* CAMPOS DE VUELO - Aparecen si hay PNR válido o si el motivo requiere información de vuelo */}
+              {((formData.pnr && validatePNR(formData.pnr)) || 
+                formData.reason === 'Equipaje' || 
+                formData.reason === 'Cambio_de_Itinerario_y_Atrasos') && (
                 <>
                   <Separator className="my-4" />
                   <div className="p-4 bg-sky-50 rounded-lg border-2 border-sky-200 space-y-4">
@@ -492,6 +494,11 @@ const ClaimManagement = () => {
                       {formData.reason === 'Equipaje' && !formData.pnr && (
                         <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">
                           Requerido para reclamos de Equipaje
+                        </span>
+                      )}
+                      {formData.reason === 'Cambio_de_Itinerario_y_Atrasos' && !formData.pnr && (
+                        <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">
+                          Requerido para reclamos de Cambio de Itinerario y Atrasos
                         </span>
                       )}
                     </h4>
