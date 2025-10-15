@@ -650,8 +650,8 @@ const ClaimManagement = () => {
                       </div>
                     </div>
 
-                    {/* VUELO AFECTADO - Solo para Cambio_de_Itinerario_y_Atrasos */}
-                    {formData.reason === 'Cambio_de_Itinerario_y_Atrasos' && (
+                    {/* VUELO AFECTADO - Para Cambio_de_Itinerario_y_Atrasos y Equipaje */}
+                    {(formData.reason === 'Cambio_de_Itinerario_y_Atrasos' || formData.reason === 'Equipaje') && (
                       <div className="space-y-2 p-3 bg-amber-50 rounded border border-amber-300">
                         <Label htmlFor="affectedFlight">¿Cuál vuelo fue afectado? *</Label>
                         <Select
