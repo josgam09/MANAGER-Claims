@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import ClaimStatusBadge from '@/components/ClaimStatusBadge';
 import ClaimPriorityBadge from '@/components/ClaimPriorityBadge';
-import { ArrowLeft, Mail, Phone, User, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, User, Calendar, Clock, DollarSign, CreditCard } from 'lucide-react';
 
 const ClaimDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,20 +31,13 @@ const ClaimDetail = () => {
   }
 
   const claimTypeLabels = {
-    compensacion: 'Compensación',
-    reembolso: 'Reembolso',
-    informacion: 'Información',
-    queja: 'Queja',
-    otro: 'Otro',
+    empresa: 'EMPRESA',
+    legal: 'LEGAL',
+    official: 'OFFICIAL',
   };
 
-  const reasonLabels = {
-    demora: 'Demora',
-    cancelacion: 'Cancelación',
-    equipaje: 'Equipaje',
-    'servicio-bordo': 'Servicio a Bordo',
-    personal: 'Personal',
-    otro: 'Otro',
+  const getReasonLabel = (reason: string) => {
+    return reason.replace(/_/g, ' ');
   };
 
   return (
@@ -54,9 +47,35 @@ const ClaimDetail = () => {
           <ArrowLeft className="h-4 w-4" />
           Volver a Reclamos
         </Button>
-        <Link to={`/claims/${claim.id}/edit`}>
-          <Button>Editar Reclamo</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link to={`/claims/${claim.id}/manage`}>
+            <Button variant="default" className="gap-2">
+              <User className="h-4 w-4" />
+              Gestionar Reclamo
+            </Button>
+          </Link>
+          <Link to={`/claims/${claim.id}/edit`}>
+            <Button variant="outline">Editar Info</Button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border-2 border-primary/20 mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Número de Reclamo</p>
+            <div className="flex items-center gap-3">
+              <h2 className="text-3xl font-bold text-primary font-mono">{claim.claimNumber}</h2>
+              <span className="text-lg font-bold bg-secondary px-3 py-1 rounded">
+                {claim.country}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <ClaimStatusBadge status={claim.status} />
+            <ClaimPriorityBadge priority={claim.priority} />
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -66,10 +85,6 @@ const ClaimDetail = () => {
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-2">
                   <CardTitle className="text-2xl">{claim.emailSubject}</CardTitle>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ClaimStatusBadge status={claim.status} />
-                    <ClaimPriorityBadge priority={claim.priority} />
-                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -98,7 +113,7 @@ const ClaimDetail = () => {
               <Separator />
               <div>
                 <h3 className="font-semibold mb-2">Motivo</h3>
-                <p className="text-muted-foreground">{reasonLabels[claim.reason]}</p>
+                <p className="text-muted-foreground">{getReasonLabel(claim.reason)}</p>
                 {claim.subReason && (
                   <p className="text-sm text-muted-foreground mt-1">Sub motivo: {claim.subReason}</p>
                 )}
@@ -136,8 +151,15 @@ const ClaimDetail = () => {
                     </div>
                     <div className="flex-1 pb-4">
                       <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold">{entry.action}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold">{entry.action}</p>
+                            {entry.area && (
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                {entry.area}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">por {entry.user}</p>
                           {entry.comment && (
                             <p className="text-sm text-muted-foreground mt-1">{entry.comment}</p>
@@ -158,39 +180,65 @@ const ClaimDetail = () => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Información del Cliente</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Información del Cliente</CardTitle>
+                {!claim.claimantName && (
+                  <span className="text-xs bg-warning/20 text-warning-foreground px-2 py-1 rounded">
+                    Pendiente de gestión
+                  </span>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Nombre del Reclamante</p>
-                  <p className="font-medium">{claim.claimantName}</p>
-                </div>
-              </div>
-              {claim.identityDocument && (
-                <div className="flex items-center gap-3">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Cédula de Identidad</p>
-                    <p className="font-medium">{claim.identityDocument}</p>
+              {claim.claimantName ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Nombre del Reclamante</p>
+                      <p className="font-medium">{claim.claimantName}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium break-all">{claim.email}</p>
-                </div>
-              </div>
-              {claim.phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Teléfono</p>
-                    <p className="font-medium">{claim.phone}</p>
-                  </div>
+                  {claim.identityDocument && (
+                    <div className="flex items-center gap-3">
+                      <User className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Cédula de Identidad</p>
+                        <p className="font-medium">{claim.identityDocument}</p>
+                      </div>
+                    </div>
+                  )}
+                  {claim.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email</p>
+                        <p className="font-medium break-all">{claim.email}</p>
+                      </div>
+                    </div>
+                  )}
+                  {claim.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Teléfono</p>
+                        <p className="font-medium">{claim.phone}</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <User className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    La información del reclamante aún no ha sido completada
+                  </p>
+                  <Link to={`/claims/${claim.id}/manage`}>
+                    <Button size="sm" className="gap-2">
+                      <User className="h-4 w-4" />
+                      Completar Información
+                    </Button>
+                  </Link>
                 </div>
               )}
             </CardContent>
@@ -250,6 +298,88 @@ const ClaimDetail = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Tarjeta de Compensación */}
+          {claim.finalStatus === 'cerrado' && claim.wasCompensated !== undefined && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Información de Compensación
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">¿Se compensó?</p>
+                    <p className="font-semibold text-lg">
+                      {claim.wasCompensated ? (
+                        <span className="text-green-600">Sí</span>
+                      ) : (
+                        <span className="text-red-600">No</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {claim.wasCompensated && claim.paymentType && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      {/* Transferencia */}
+                      {(claim.paymentType === 'transferencia' || claim.paymentType === 'ambas') && (
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <DollarSign className="h-4 w-4 text-blue-700" />
+                            <p className="font-semibold text-blue-900">Transferencia</p>
+                          </div>
+                          <div className="grid gap-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Monto:</span>
+                              <span className="font-medium">{claim.transferAmount}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Moneda:</span>
+                              <span className="font-medium">
+                                {claim.transferCurrency === 'OTRA' 
+                                  ? claim.transferCustomCurrency 
+                                  : claim.transferCurrency}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Gift Card */}
+                      {(claim.paymentType === 'gc' || claim.paymentType === 'ambas') && (
+                        <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CreditCard className="h-4 w-4 text-purple-700" />
+                            <p className="font-semibold text-purple-900">Gift Card</p>
+                          </div>
+                          <div className="grid gap-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Monto:</span>
+                              <span className="font-medium">{claim.gcAmount}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Moneda:</span>
+                              <span className="font-medium">
+                                {claim.gcCurrency === 'OTRA' 
+                                  ? claim.gcCustomCurrency 
+                                  : claim.gcCurrency}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

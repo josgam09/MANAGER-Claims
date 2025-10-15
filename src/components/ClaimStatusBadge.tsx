@@ -6,17 +6,33 @@ interface ClaimStatusBadgeProps {
 }
 
 const ClaimStatusBadge = ({ status }: ClaimStatusBadgeProps) => {
-  const statusConfig = {
-    new: { label: 'Nuevo', className: 'bg-primary/10 text-primary hover:bg-primary/20' },
-    'in-progress': { label: 'En Progreso', className: 'bg-warning/10 text-warning hover:bg-warning/20' },
-    resolved: { label: 'Resuelto', className: 'bg-success/10 text-success hover:bg-success/20' },
-    closed: { label: 'Cerrado', className: 'bg-muted text-muted-foreground hover:bg-muted' },
+  const statusConfig: Record<ClaimStatus, { label: string; className: string }> = {
+    'new': { 
+      label: 'Nuevo', 
+      className: 'bg-blue-100 text-blue-700 border-blue-300' 
+    },
+    'en-gestion': { 
+      label: 'En Gestión', 
+      className: 'bg-yellow-100 text-yellow-700 border-yellow-300' 
+    },
+    'escalado': { 
+      label: 'Escalado', 
+      className: 'bg-orange-100 text-orange-700 border-orange-300' 
+    },
+    'enviado-abogados': { 
+      label: 'Enviado a Abogados', 
+      className: 'bg-purple-100 text-purple-700 border-purple-300' 
+    },
+    'para-cierre': { 
+      label: 'Para Cierre', 
+      className: 'bg-green-100 text-green-700 border-green-300' 
+    },
   };
 
   const config = statusConfig[status];
 
   return (
-    <Badge className={config.className}>
+    <Badge variant="outline" className={config.className}>
       {config.label}
     </Badge>
   );

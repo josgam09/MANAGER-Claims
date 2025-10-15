@@ -13,46 +13,68 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { ArrowLeft, CalendarIcon } from 'lucide-react';
-import { ClaimStatus, ClaimPriority, ClaimType, ClaimReason } from '@/types/claim';
+import { ArrowLeft } from 'lucide-react';
+import { ClaimStatus, ClaimPriority, ClaimType, ClaimReason, Country, ORGANISMOS_BY_COUNTRY, SUB_MOTIVOS_BY_MOTIVO, AGENTES } from '@/types/claim';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 
 const ClaimForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addClaim, updateClaim, getClaim, addClaimHistory } = useClaims();
+  const { addClaim, updateClaim, getClaim, addClaimHistory, getNextClaimNumber } = useClaims();
   const isEditing = !!id;
 
   const [formData, setFormData] = useState({
+    country: 'AR' as Country,
     emailSubject: '',
     organizationClaimNumber: '',
-    claimType: 'compensacion' as ClaimType,
+    claimType: 'empresa' as ClaimType,
     organization: '',
+    reason: '' as ClaimReason | '',
+    subReason: '',
+    customerClaimDetail: '',
+    informationRequest: '',
+    assignedTo: '',
+    // Campos que se completarán en gestión
     claimantName: '',
     identityDocument: '',
     email: '',
     phone: '',
-    reason: 'otro' as ClaimReason,
-    subReason: '',
-    customerClaimDetail: '',
-    informationRequest: '',
-    pnr: '',
-    initialDate: new Date(),
     status: 'new' as ClaimStatus,
     priority: 'medium' as ClaimPriority,
-    assignedTo: '',
   });
+
+  // Obtener organismos disponibles basados en país y tipo de claim
+  const availableOrganismos = ORGANISMOS_BY_COUNTRY[formData.country]?.[formData.claimType] || [];
+
+  // Obtener sub motivos disponibles basados en el motivo seleccionado
+  const availableSubMotivos = formData.reason ? (SUB_MOTIVOS_BY_MOTIVO[formData.reason as ClaimReason] || []) : [];
+
+  // Resetear organismo cuando cambie país o tipo de claim (solo en modo creación)
+  useEffect(() => {
+    if (!isEditing) {
+      const currentOrgValid = availableOrganismos.includes(formData.organization);
+      if (!currentOrgValid) {
+        setFormData(prev => ({ ...prev, organization: '' }));
+      }
+    }
+  }, [formData.country, formData.claimType, availableOrganismos, isEditing, formData.organization]);
+
+  // Resetear sub motivo cuando cambie el motivo (solo en modo creación)
+  useEffect(() => {
+    if (!isEditing) {
+      const currentSubMotivoValid = availableSubMotivos.includes(formData.subReason);
+      if (!currentSubMotivoValid) {
+        setFormData(prev => ({ ...prev, subReason: '' }));
+      }
+    }
+  }, [formData.reason, availableSubMotivos, isEditing, formData.subReason]);
 
   useEffect(() => {
     if (isEditing && id) {
       const claim = getClaim(id);
       if (claim) {
         setFormData({
+          country: claim.country,
           emailSubject: claim.emailSubject,
           organizationClaimNumber: claim.organizationClaimNumber,
           claimType: claim.claimType,
@@ -65,8 +87,6 @@ const ClaimForm = () => {
           subReason: claim.subReason,
           customerClaimDetail: claim.customerClaimDetail,
           informationRequest: claim.informationRequest,
-          pnr: claim.pnr,
-          initialDate: claim.initialDate,
           status: claim.status,
           priority: claim.priority,
           assignedTo: claim.assignedTo || '',
@@ -78,17 +98,37 @@ const ClaimForm = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.emailSubject || !formData.claimantName || !formData.email || !formData.customerClaimDetail) {
+    // Validación básica para crear reclamo (reason y subReason son opcionales ahora)
+    if (!formData.emailSubject || !formData.customerClaimDetail || !formData.organization) {
       toast.error('Por favor complete todos los campos requeridos');
       return;
     }
 
+    // Validación adicional para edición (gestión)
+    if (isEditing && formData.claimantName && (!formData.email)) {
+      toast.error('Si ingresa el nombre del reclamante, el email es requerido');
+      return;
+    }
+
     if (isEditing && id) {
-      updateClaim(id, formData);
-      addClaimHistory(id, 'Reclamo actualizado', 'Información del reclamo modificada');
+      // Convertir el formData para que sea compatible con Claim
+      const updateData = {
+        ...formData,
+        reason: formData.reason as ClaimReason,
+      };
+      updateClaim(id, updateData);
+      addClaimHistory(id, 'Reclamo actualizado', 'Información del reclamo modificada', 'Información Básica');
       toast.success('Reclamo actualizado exitosamente');
     } else {
-      addClaim(formData);
+      // Convertir el formData para que sea compatible con Claim
+      const newClaimData = {
+        ...formData,
+        reason: formData.reason as ClaimReason,
+        finalStatus: 'pendiente' as const,
+        pnr: '', // Se completará en gestión
+        initialDate: new Date(), // Fecha de creación por defecto
+      };
+      addClaim(newClaimData);
       toast.success('Reclamo creado exitosamente');
     }
 
@@ -105,268 +145,225 @@ const ClaimForm = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            {isEditing ? 'Editar Reclamo' : 'Nuevo Reclamo'}
+            {isEditing ? 'Editar Información del Reclamo' : 'Nuevo Reclamo'}
           </CardTitle>
+          {!isEditing && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Ingrese la información básica del reclamo. El agente asignado completará los datos del reclamante posteriormente.
+            </p>
+          )}
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="emailSubject">Asunto del Correo *</Label>
-                <Input
-                  id="emailSubject"
-                  value={formData.emailSubject}
-                  onChange={(e) => setFormData({ ...formData, emailSubject: e.target.value })}
-                  placeholder="Asunto del correo del reclamo"
-                  required
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="organizationClaimNumber">N° Reclamo Organismo</Label>
-                  <Input
-                    id="organizationClaimNumber"
-                    value={formData.organizationClaimNumber}
-                    onChange={(e) => setFormData({ ...formData, organizationClaimNumber: e.target.value })}
-                    placeholder="Número de reclamo en el organismo"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="claimType">Tipo Claims</Label>
-                  <Select
-                    value={formData.claimType}
-                    onValueChange={(value) => setFormData({ ...formData, claimType: value as ClaimType })}
-                  >
-                    <SelectTrigger id="claimType">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="compensacion">Compensación</SelectItem>
-                      <SelectItem value="reembolso">Reembolso</SelectItem>
-                      <SelectItem value="informacion">Información</SelectItem>
-                      <SelectItem value="queja">Queja</SelectItem>
-                      <SelectItem value="otro">Otro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* NIC y País en paralelo - Diseño compacto */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border-2 border-primary/20">
+                <Label className="text-xs text-muted-foreground">
+                  {isEditing ? 'NIC' : 'NIC (será asignado)'}
+                </Label>
+                <p className="text-xl font-bold text-primary mt-1 font-mono">
+                  {isEditing && id ? (getClaim(id)?.claimNumber || 'N/A') : (getNextClaimNumber() || 'NIC-00000001-2025')}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="organization">Organismo</Label>
-                <Input
-                  id="organization"
+                <Label htmlFor="country">País de Origen *</Label>
+                <Select
+                  value={formData.country}
+                  onValueChange={(value) => setFormData({ ...formData, country: value as Country })}
+                >
+                  <SelectTrigger id="country">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AR">🇦🇷 Argentina (AR)</SelectItem>
+                    <SelectItem value="BR">🇧🇷 Brasil (BR)</SelectItem>
+                    <SelectItem value="CL">🇨🇱 Chile (CL)</SelectItem>
+                    <SelectItem value="CO">🇨🇴 Colombia (CO)</SelectItem>
+                    <SelectItem value="EC">🇪🇨 Ecuador (EC)</SelectItem>
+                    <SelectItem value="PY">🇵🇾 Paraguay (PY)</SelectItem>
+                    <SelectItem value="PE">🇵🇪 Perú (PE)</SelectItem>
+                    <SelectItem value="RD">🇩🇴 República Dominicana (RD)</SelectItem>
+                    <SelectItem value="UY">🇺🇾 Uruguay (UY)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* Asunto del Correo */}
+            <div className="space-y-2">
+              <Label htmlFor="emailSubject">Asunto del Correo *</Label>
+              <Input
+                id="emailSubject"
+                value={formData.emailSubject}
+                onChange={(e) => setFormData({ ...formData, emailSubject: e.target.value })}
+                placeholder="Asunto del correo del reclamo"
+                required
+              />
+            </div>
+
+            {/* N° Reclamo de Organismo */}
+            <div className="space-y-2">
+              <Label htmlFor="organizationClaimNumber">N° Reclamo de Organismo</Label>
+              <Input
+                id="organizationClaimNumber"
+                value={formData.organizationClaimNumber}
+                onChange={(e) => setFormData({ ...formData, organizationClaimNumber: e.target.value })}
+                placeholder="Número de reclamo del organismo externo"
+              />
+            </div>
+
+            {/* Tipo de Claim y Organismo en paralelo */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="claimType">Tipo de Claim *</Label>
+                <Select
+                  value={formData.claimType}
+                  onValueChange={(value) => setFormData({ ...formData, claimType: value as ClaimType })}
+                >
+                  <SelectTrigger id="claimType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="empresa">EMPRESA</SelectItem>
+                    <SelectItem value="legal">LEGAL</SelectItem>
+                    <SelectItem value="official">OFFICIAL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="organization">Organismo *</Label>
+                <Select
                   value={formData.organization}
-                  onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                  placeholder="Nombre del organismo"
-                />
+                  onValueChange={(value) => setFormData({ ...formData, organization: value })}
+                >
+                  <SelectTrigger id="organization">
+                    <SelectValue placeholder="Seleccione un organismo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableOrganismos.length > 0 ? (
+                      availableOrganismos.map((org) => (
+                        <SelectItem key={org} value={org}>
+                          {org}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-disponible" disabled>
+                        Seleccione país y tipo de claim primero
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {availableOrganismos.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {availableOrganismos.length} organismo(s) disponible(s) para {formData.country} - {formData.claimType.toUpperCase()}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Información del Reclamante</h3>
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="claimantName">Nombre del Reclamante *</Label>
-                  <Input
-                    id="claimantName"
-                    value={formData.claimantName}
-                    onChange={(e) => setFormData({ ...formData, claimantName: e.target.value })}
-                    placeholder="Nombre completo"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="identityDocument">Cédula de Identidad (RUT-DNI)</Label>
-                  <Input
-                    id="identityDocument"
-                    value={formData.identityDocument}
-                    onChange={(e) => setFormData({ ...formData, identityDocument: e.target.value })}
-                    placeholder="12345678-9"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="email@ejemplo.com"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">N° Teléfono</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="+54 11 1234-5678"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Detalles del Reclamo</h3>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="reason">Motivos</Label>
-                  <Select
-                    value={formData.reason}
-                    onValueChange={(value) => setFormData({ ...formData, reason: value as ClaimReason })}
-                  >
-                    <SelectTrigger id="reason">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="demora">Demora</SelectItem>
-                      <SelectItem value="cancelacion">Cancelación</SelectItem>
-                      <SelectItem value="equipaje">Equipaje</SelectItem>
-                      <SelectItem value="servicio-bordo">Servicio a Bordo</SelectItem>
-                      <SelectItem value="personal">Personal</SelectItem>
-                      <SelectItem value="otro">Otro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="subReason">Sub Motivos</Label>
-                  <Input
-                    id="subReason"
-                    value={formData.subReason}
-                    onChange={(e) => setFormData({ ...formData, subReason: e.target.value })}
-                    placeholder="Especifique el sub motivo"
-                  />
-                </div>
+            {/* Motivos y Sub Motivos en paralelo - Compacto */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="reason">Motivos</Label>
+                <Select
+                  value={formData.reason}
+                  onValueChange={(value) => setFormData({ ...formData, reason: value as ClaimReason })}
+                >
+                  <SelectTrigger id="reason">
+                    <SelectValue placeholder="Seleccione un motivo (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Aeropuerto">Aeropuerto</SelectItem>
+                    <SelectItem value="American_Airlines">American Airlines</SelectItem>
+                    <SelectItem value="Cambio_de_Itinerario_y_Atrasos">Cambio de Itinerario y Atrasos</SelectItem>
+                    <SelectItem value="Cesion_y_Retracto">Cesión y Retracto</SelectItem>
+                    <SelectItem value="Club_de_Descuento">Club de Descuento</SelectItem>
+                    <SelectItem value="Crisis_Social">Crisis Social</SelectItem>
+                    <SelectItem value="Devoluciones">Devoluciones</SelectItem>
+                    <SelectItem value="Equipaje">Equipaje</SelectItem>
+                    <SelectItem value="Error_en_Compra">Error en Compra</SelectItem>
+                    <SelectItem value="Gift_Card">Gift Card</SelectItem>
+                    <SelectItem value="Impedimento_Médico">Impedimento Médico</SelectItem>
+                    <SelectItem value="Norwegian">Norwegian</SelectItem>
+                    <SelectItem value="PVC_SERNAC">PVC SERNAC</SelectItem>
+                    <SelectItem value="Servicios_Opcionales">Servicios Opcionales</SelectItem>
+                    <SelectItem value="Sitio_Web">Sitio Web</SelectItem>
+                    <SelectItem value="Validación_de_Compra">Validación de Compra</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="customerClaimDetail">Detalle del Reclamo del Cliente *</Label>
-                <Textarea
-                  id="customerClaimDetail"
-                  value={formData.customerClaimDetail}
-                  onChange={(e) => setFormData({ ...formData, customerClaimDetail: e.target.value })}
-                  placeholder="Describa en detalle el reclamo del cliente..."
-                  rows={5}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="informationRequest">Solicitud de Información</Label>
-                <Textarea
-                  id="informationRequest"
-                  value={formData.informationRequest}
-                  onChange={(e) => setFormData({ ...formData, informationRequest: e.target.value })}
-                  placeholder="Información adicional solicitada..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="pnr">PNR</Label>
-                  <Input
-                    id="pnr"
-                    value={formData.pnr}
-                    onChange={(e) => setFormData({ ...formData, pnr: e.target.value })}
-                    placeholder="Código PNR"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="initialDate">Fecha Inicial que se Generó el Reclamo</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !formData.initialDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.initialDate ? format(formData.initialDate, "PPP", { locale: es }) : "Seleccione una fecha"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.initialDate}
-                        onSelect={(date) => date && setFormData({ ...formData, initialDate: date })}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                <Label htmlFor="subReason">Sub Motivos</Label>
+                <Select
+                  value={formData.subReason}
+                  onValueChange={(value) => setFormData({ ...formData, subReason: value })}
+                >
+                  <SelectTrigger id="subReason">
+                    <SelectValue placeholder="Seleccione un sub motivo (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSubMotivos.length > 0 ? (
+                      availableSubMotivos.map((subMotivo) => (
+                        <SelectItem key={subMotivo} value={subMotivo}>
+                          {subMotivo}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-disponible" disabled>
+                        Seleccione un motivo primero
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {availableSubMotivos.length > 0 && formData.reason && (
+                  <p className="text-xs text-muted-foreground">
+                    {availableSubMotivos.length} sub motivo(s) disponible(s) para {formData.reason.replace(/_/g, ' ')}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Estado y Gestión</h3>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="status">Estado</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value as ClaimStatus })}
-                  >
-                    <SelectTrigger id="status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new">Nuevo</SelectItem>
-                      <SelectItem value="in-progress">En Progreso</SelectItem>
-                      <SelectItem value="resolved">Resuelto</SelectItem>
-                      <SelectItem value="closed">Cerrado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Prioridad</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(value) => setFormData({ ...formData, priority: value as ClaimPriority })}
-                  >
-                    <SelectTrigger id="priority">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Baja</SelectItem>
-                      <SelectItem value="medium">Media</SelectItem>
-                      <SelectItem value="high">Alta</SelectItem>
-                      <SelectItem value="critical">Crítica</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="assignedTo">Asignado a</Label>
-                  <Input
-                    id="assignedTo"
-                    value={formData.assignedTo}
-                    onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                    placeholder="Nombre del responsable"
-                  />
-                </div>
-              </div>
+            {/* Detalle del Reclamo */}
+            <div className="space-y-2">
+              <Label htmlFor="customerClaimDetail">Detalle del Reclamo del Cliente *</Label>
+              <Textarea
+                id="customerClaimDetail"
+                value={formData.customerClaimDetail}
+                onChange={(e) => setFormData({ ...formData, customerClaimDetail: e.target.value })}
+                placeholder="Describa en detalle el reclamo del cliente..."
+                rows={4}
+                required
+              />
             </div>
 
-            <div className="flex gap-4 justify-end">
+            {/* Asignación */}
+            <div className="space-y-2">
+              <Label htmlFor="assignedTo">Asignado a *</Label>
+                <Select
+                  value={formData.assignedTo || 'sin-asignar'}
+                  onValueChange={(value) => setFormData({ ...formData, assignedTo: value === 'sin-asignar' ? '' : value })}
+                >
+                  <SelectTrigger id="assignedTo">
+                    <SelectValue placeholder="Seleccione un agente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sin-asignar">Sin asignar</SelectItem>
+                    {AGENTES.map((agente) => (
+                      <SelectItem key={agente} value={agente}>
+                        {agente}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              <p className="text-xs text-muted-foreground">
+                El agente asignado podrá gestionar el reclamo y completar la información del reclamante
+              </p>
+            </div>
+
+            <div className="flex gap-4 justify-end pt-2">
               <Button type="button" variant="outline" onClick={() => navigate('/claims')}>
                 Cancelar
               </Button>
