@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { AlertCircle, CheckCircle, Clock, TrendingUp, Plus, Download, Filter, Calendar as CalendarIcon, PieChart as PieChartIcon, BarChart as BarChartIcon, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, TrendingUp, Plus, Download, Filter, Calendar as CalendarIcon, PieChart as PieChartIcon, BarChart as BarChartIcon, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ClaimStatus, ClaimPriority, ClaimReason, ClaimType, Country, SUB_MOTIVOS_BY_MOTIVO, ORGANISMOS_BY_COUNTRY, AGENTES } from '@/types/claim';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, format } from 'date-fns';
@@ -52,6 +52,10 @@ const Dashboard = () => {
   const [reasonFilter, setReasonFilter] = useState<ClaimReason | 'all'>('all');
   const [subReasonFilter, setSubReasonFilter] = useState<string>('all');
   const [routeFilter, setRouteFilter] = useState<'all' | 'IDA' | 'VUELTA'>('all');
+
+  // Estados de ordenamiento
+  const [sortColumn, setSortColumn] = useState<string>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Contador de filtros activos
   const activeFiltersCount = [
@@ -120,8 +124,18 @@ const Dashboard = () => {
   }, [countryFilter, claimTypeFilter]);
 
   // Aplicar todos los filtros
+  // Función para manejar el ordenamiento
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
   const filteredClaims = useMemo(() => {
-    return claimsToShow.filter((claim) => {
+    const filtered = claimsToShow.filter((claim) => {
       // Filtro de búsqueda
       const matchesSearch = !search || 
         claim.claimNumber.toLowerCase().includes(search.toLowerCase()) ||
@@ -210,7 +224,67 @@ const Dashboard = () => {
 
       return matchesSearch && matchesStatus && matchesPriority && matchesDate && matchesCountry && matchesClaimType && matchesOrganization && matchesAssignedTo && matchesReason && matchesSubReason && matchesRoute;
     });
-  }, [claimsToShow, search, statusFilter, priorityFilter, dateFilter, dateRange, countryFilter, claimTypeFilter, organizationFilter, assignedToFilter, reasonFilter, subReasonFilter, routeFilter]);
+
+    // Aplicar ordenamiento
+    return filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortColumn) {
+        case 'claimNumber':
+          aValue = a.claimNumber;
+          bValue = b.claimNumber;
+          break;
+        case 'country':
+          aValue = a.country;
+          bValue = b.country;
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        case 'emailSubject':
+          aValue = a.emailSubject;
+          bValue = b.emailSubject;
+          break;
+        case 'claimType':
+          aValue = a.claimType;
+          bValue = b.claimType;
+          break;
+        case 'organization':
+          aValue = a.organization || '';
+          bValue = b.organization || '';
+          break;
+        case 'reason':
+          aValue = a.reason || '';
+          bValue = b.reason || '';
+          break;
+        case 'subReason':
+          aValue = a.subReason || '';
+          bValue = b.subReason || '';
+          break;
+        case 'assignedTo':
+          aValue = a.assignedTo || '';
+          bValue = b.assignedTo || '';
+          break;
+        case 'finalStatus':
+          aValue = a.finalStatus || '';
+          bValue = b.finalStatus || '';
+          break;
+        default:
+          aValue = a.createdAt;
+          bValue = b.createdAt;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [claimsToShow, search, statusFilter, priorityFilter, dateFilter, dateRange, countryFilter, claimTypeFilter, organizationFilter, assignedToFilter, reasonFilter, subReasonFilter, routeFilter, sortColumn, sortDirection]);
 
   const stats = {
     total: filteredClaims.length,
@@ -413,7 +487,7 @@ const Dashboard = () => {
       </div>
 
       {/* Filtros Híbridos - Compactos */}
-      <Card>
+        <Card>
         <CardContent className="pt-4 pb-3">
           {/* Filtros Principales - Siempre Visibles */}
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5 mb-3">
@@ -604,7 +678,7 @@ const Dashboard = () => {
                       <SelectItem value="official">OFFICIAL</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+              </div>
 
                 {/* Organismo */}
                 <div>
@@ -645,7 +719,7 @@ const Dashboard = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+              </div>
 
                 {/* Motivo */}
                 <div>
@@ -699,7 +773,7 @@ const Dashboard = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+              </div>
 
                 {/* Ruta */}
                 <div>
@@ -780,13 +854,13 @@ const Dashboard = () => {
         </Card>
 
           {/* Gráfico de Barras Apiladas - Por Motivos */}
-          <Card>
+        <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <BarChartIcon className="h-4 w-4" />
                 Claims por Motivo
               </CardTitle>
-            </CardHeader>
+          </CardHeader>
             <CardContent className="pt-0">
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={reasonChartData} layout="horizontal">
@@ -803,7 +877,7 @@ const Dashboard = () => {
                             <p className="text-sm font-medium" style={{ color: PANTONE_534 }}>Pendientes: {data.pendiente}</p>
                             <p className="text-sm font-medium" style={{ color: PANTONE_3125 }}>Cerrados: {data.cerrado}</p>
                             <p className="text-sm font-bold mt-1" style={{ color: PANTONE_1805 }}>Total: {data.total}</p>
-                          </div>
+                </div>
                         );
                       }
                       return null;
@@ -831,17 +905,83 @@ const Dashboard = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-semibold">NIC</TableHead>
-                  <TableHead className="font-semibold">País</TableHead>
-                  <TableHead className="font-semibold">Fecha Ingreso</TableHead>
-                  <TableHead className="font-semibold">Estado</TableHead>
-                  <TableHead className="font-semibold">Asunto</TableHead>
-                  <TableHead className="font-semibold">Tipo Claims</TableHead>
-                  <TableHead className="font-semibold">Organismo</TableHead>
-                  <TableHead className="font-semibold">Motivo</TableHead>
-                  <TableHead className="font-semibold">Sub Motivo</TableHead>
-                  <TableHead className="font-semibold">Asignado a</TableHead>
-                  <TableHead className="font-semibold">Estado Final</TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('claimNumber')}>
+                      NIC
+                      {sortColumn === 'claimNumber' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'claimNumber' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('country')}>
+                      País
+                      {sortColumn === 'country' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'country' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('createdAt')}>
+                      Fecha<br/>Ingreso
+                      {sortColumn === 'createdAt' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'createdAt' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('status')}>
+                      Estado
+                      {sortColumn === 'status' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'status' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('emailSubject')}>
+                      Asunto
+                      {sortColumn === 'emailSubject' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'emailSubject' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('claimType')}>
+                      Tipo<br/>Claims
+                      {sortColumn === 'claimType' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'claimType' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('organization')}>
+                      Organismo
+                      {sortColumn === 'organization' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'organization' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('reason')}>
+                      Motivo
+                      {sortColumn === 'reason' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'reason' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('subReason')}>
+                      Sub<br/>Motivo
+                      {sortColumn === 'subReason' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'subReason' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('assignedTo')}>
+                      Asignado<br/>a
+                      {sortColumn === 'assignedTo' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'assignedTo' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="py-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('finalStatus')}>
+                      Estado<br/>Final
+                      {sortColumn === 'finalStatus' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                      {sortColumn !== 'finalStatus' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                    </Button>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -854,75 +994,75 @@ const Dashboard = () => {
                 ) : (
                   filteredClaims.map((claim) => (
                     <TableRow key={claim.id} className="cursor-pointer hover:bg-accent">
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded font-semibold">
+                          <span className="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded font-semibold">
                             {claim.claimNumber}
                       </span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="font-semibold">{claim.country}</span>
+                          <span className="text-xs font-semibold">{claim.country}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <div className="text-sm">
+                          <div className="text-xs">
                     {new Date(claim.initialDate).toLocaleDateString('es-AR')}
                   </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-[10px] text-muted-foreground">
                             {new Date(claim.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
                           <ClaimStatusBadge status={claim.status} />
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="font-medium">{claim.emailSubject}</span>
+                          <span className="text-xs font-medium">{claim.emailSubject}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-sm uppercase">{claim.claimType}</span>
+                          <span className="text-xs uppercase">{claim.claimType}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-sm">{claim.organization}</span>
+                          <span className="text-xs">{claim.organization}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-sm">{claim.reason ? claim.reason.replace(/_/g, ' ') : '-'}</span>
+                          <span className="text-xs">{claim.reason ? claim.reason.replace(/_/g, ' ') : '-'}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-sm">{claim.subReason || '-'}</span>
+                          <span className="text-xs">{claim.subReason || '-'}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
                           {claim.assignedTo ? (
-                            <span className="text-sm font-medium">{claim.assignedTo}</span>
+                            <span className="text-xs font-medium">{claim.assignedTo}</span>
                           ) : (
-                            <span className="text-sm text-muted-foreground italic">Sin asignar</span>
+                            <span className="text-xs text-muted-foreground italic">Sin asignar</span>
                           )}
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
                           {claim.finalStatus === 'cerrado' ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-300">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-800 border border-green-300">
                               CERRADO
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300">
                               PENDIENTE
                             </span>
                           )}

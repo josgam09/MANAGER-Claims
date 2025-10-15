@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import ClaimStatusBadge from '@/components/ClaimStatusBadge';
 import ClaimPriorityBadge from '@/components/ClaimPriorityBadge';
-import { Plus, Search, Download, UserPlus, X, Filter, Calendar as CalendarIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Search, Download, UserPlus, X, Filter, Calendar as CalendarIcon, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ClaimStatus, ClaimPriority, Country, AGENTES } from '@/types/claim';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
@@ -54,6 +54,10 @@ const ClaimsList = () => {
   const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<ClaimStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<ClaimPriority | 'all'>('all');
+  
+  // Estados de ordenamiento
+  const [sortColumn, setSortColumn] = useState<string>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
   // Estado para asignación masiva
   const [selectedClaims, setSelectedClaims] = useState<string[]>([]);
@@ -137,8 +141,18 @@ const ClaimsList = () => {
   }, [claims, dateFilter, dateRange, hasRole, user]);
 
   // Luego aplicar los demás filtros sobre el conjunto filtrado por fecha
+  // Función para manejar el ordenamiento
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
   const filteredClaims = useMemo(() => {
-    return dateFilteredClaims.filter((claim) => {
+    const filtered = dateFilteredClaims.filter((claim) => {
       const matchesSearch =
         claim.claimNumber.toLowerCase().includes(search.toLowerCase()) ||
         claim.emailSubject.toLowerCase().includes(search.toLowerCase()) ||
@@ -155,7 +169,67 @@ const ClaimsList = () => {
 
       return matchesSearch && matchesCountry && matchesAssignedTo && matchesStatus && matchesPriority;
     });
-  }, [dateFilteredClaims, search, countryFilter, assignedToFilter, statusFilter, priorityFilter]);
+
+    // Aplicar ordenamiento
+    return filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortColumn) {
+        case 'claimNumber':
+          aValue = a.claimNumber;
+          bValue = b.claimNumber;
+          break;
+        case 'country':
+          aValue = a.country;
+          bValue = b.country;
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        case 'emailSubject':
+          aValue = a.emailSubject;
+          bValue = b.emailSubject;
+          break;
+        case 'claimType':
+          aValue = a.claimType;
+          bValue = b.claimType;
+          break;
+        case 'organization':
+          aValue = a.organization || '';
+          bValue = b.organization || '';
+          break;
+        case 'reason':
+          aValue = a.reason || '';
+          bValue = b.reason || '';
+          break;
+        case 'subReason':
+          aValue = a.subReason || '';
+          bValue = b.subReason || '';
+          break;
+        case 'assignedTo':
+          aValue = a.assignedTo || '';
+          bValue = b.assignedTo || '';
+          break;
+        case 'finalStatus':
+          aValue = a.finalStatus || '';
+          bValue = b.finalStatus || '';
+          break;
+        default:
+          aValue = a.createdAt;
+          bValue = b.createdAt;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [dateFilteredClaims, search, countryFilter, assignedToFilter, statusFilter, priorityFilter, sortColumn, sortDirection]);
 
   const exportToCSV = () => {
     const headers = ['N° Reclamo', 'País', 'Asunto', 'N° Reclamo Organismo', 'Tipo Claims', 'Organismo', 'Reclamante', 'RUT/DNI', 'Email', 'Teléfono', 'Motivo', 'Sub Motivo', 'PNR', 'Estado', 'Prioridad', 'Asignado a', 'Estado Final', 'Fecha Inicial', 'Fecha Creación', 'Última Actualización'];
@@ -265,12 +339,12 @@ const ClaimsList = () => {
             Exportar CSV
           </Button>
           {hasRole(['admin', 'supervisor']) && (
-            <Link to="/claims/new">
-              <Button size="lg" className="gap-2">
-                <Plus className="h-5 w-5" />
-                Nuevo Reclamo
-              </Button>
-            </Link>
+          <Link to="/claims/new">
+            <Button size="lg" className="gap-2">
+              <Plus className="h-5 w-5" />
+              Nuevo Reclamo
+            </Button>
+          </Link>
           )}
         </div>
       </div>
@@ -316,36 +390,36 @@ const ClaimsList = () => {
             {/* Estado */}
             <div>
               <Label htmlFor="statusFilter" className="text-xs font-medium mb-1.5 block">Estado</Label>
-              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ClaimStatus | 'all')}>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ClaimStatus | 'all')}>
                 <SelectTrigger id="statusFilter" className="h-9">
                   <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
+              </SelectTrigger>
+              <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="new">Nuevo</SelectItem>
+                <SelectItem value="new">Nuevo</SelectItem>
                   <SelectItem value="en-gestion">En Gestión</SelectItem>
                   <SelectItem value="escalado">Escalado</SelectItem>
                   <SelectItem value="enviado-abogados">Abogados</SelectItem>
                   <SelectItem value="para-cierre">Para Cierre</SelectItem>
-                </SelectContent>
-              </Select>
+              </SelectContent>
+            </Select>
             </div>
 
             {/* Prioridad */}
             <div>
               <Label htmlFor="priorityFilter" className="text-xs font-medium mb-1.5 block">Prioridad</Label>
-              <Select value={priorityFilter} onValueChange={(value) => setPriorityFilter(value as ClaimPriority | 'all')}>
+            <Select value={priorityFilter} onValueChange={(value) => setPriorityFilter(value as ClaimPriority | 'all')}>
                 <SelectTrigger id="priorityFilter" className="h-9">
                   <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
+              </SelectTrigger>
+              <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="critical">Crítica</SelectItem>
                   <SelectItem value="high">Alta</SelectItem>
                   <SelectItem value="medium">Media</SelectItem>
-                  <SelectItem value="low">Baja</SelectItem>
-                </SelectContent>
-              </Select>
+                <SelectItem value="low">Baja</SelectItem>
+              </SelectContent>
+            </Select>
             </div>
 
             {/* Botón Filtros Avanzados + Limpiar */}
@@ -495,109 +569,175 @@ const ClaimsList = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {filteredClaims.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No se encontraron reclamos</p>
-            </div>
-          ) : (
+            {filteredClaims.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No se encontraron reclamos</p>
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {canMassAssign && <TableHead className="w-12"></TableHead>}
-                    <TableHead className="font-semibold">NIC</TableHead>
-                    <TableHead className="font-semibold">País</TableHead>
-                    <TableHead className="font-semibold">Fecha Ingreso</TableHead>
-                    <TableHead className="font-semibold">Estado</TableHead>
-                    <TableHead className="font-semibold">Asunto</TableHead>
-                    <TableHead className="font-semibold">Tipo Claims</TableHead>
-                    <TableHead className="font-semibold">Organismo</TableHead>
-                    <TableHead className="font-semibold">Motivo</TableHead>
-                    <TableHead className="font-semibold">Sub Motivo</TableHead>
-                    <TableHead className="font-semibold">Asignado a</TableHead>
-                    <TableHead className="font-semibold">Estado Final</TableHead>
+                    {canMassAssign && <TableHead className="w-12 py-2"></TableHead>}
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('claimNumber')}>
+                        NIC
+                        {sortColumn === 'claimNumber' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'claimNumber' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('country')}>
+                        País
+                        {sortColumn === 'country' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'country' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('createdAt')}>
+                        Fecha<br/>Ingreso
+                        {sortColumn === 'createdAt' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'createdAt' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('status')}>
+                        Estado
+                        {sortColumn === 'status' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'status' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('emailSubject')}>
+                        Asunto
+                        {sortColumn === 'emailSubject' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'emailSubject' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('claimType')}>
+                        Tipo<br/>Claims
+                        {sortColumn === 'claimType' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'claimType' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('organization')}>
+                        Organismo
+                        {sortColumn === 'organization' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'organization' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent" onClick={() => handleSort('reason')}>
+                        Motivo
+                        {sortColumn === 'reason' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'reason' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('subReason')}>
+                        Sub<br/>Motivo
+                        {sortColumn === 'subReason' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'subReason' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('assignedTo')}>
+                        Asignado<br/>a
+                        {sortColumn === 'assignedTo' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'assignedTo' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="py-2">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold hover:bg-accent whitespace-normal text-left" onClick={() => handleSort('finalStatus')}>
+                        Estado<br/>Final
+                        {sortColumn === 'finalStatus' && (sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />)}
+                        {sortColumn !== 'finalStatus' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
+                      </Button>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredClaims.map((claim) => (
                     <TableRow key={claim.id} className="cursor-pointer hover:bg-accent">
                       {canMassAssign && (
-                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedClaims.includes(claim.id)}
                             onCheckedChange={() => toggleClaimSelection(claim.id)}
                           />
                         </TableCell>
                       )}
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded font-semibold">
+                          <span className="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded font-semibold">
                             {claim.claimNumber}
                           </span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="font-semibold">{claim.country}</span>
+                          <span className="text-xs font-semibold">{claim.country}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <div className="text-sm">
+                          <div className="text-xs">
                             {new Date(claim.initialDate).toLocaleDateString('es-AR')}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(claim.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
+                      </div>
+                          <div className="text-[10px] text-muted-foreground">
+                        {new Date(claim.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
                           <ClaimStatusBadge status={claim.status} />
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="font-medium">{claim.emailSubject}</span>
+                          <span className="text-xs font-medium">{claim.emailSubject}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-sm uppercase">{claim.claimType}</span>
+                          <span className="text-xs uppercase">{claim.claimType}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-sm">{claim.organization}</span>
+                          <span className="text-xs">{claim.organization}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-sm">{claim.reason.replace(/_/g, ' ')}</span>
+                          <span className="text-xs">{claim.reason.replace(/_/g, ' ')}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
-                          <span className="text-sm">{claim.subReason}</span>
+                          <span className="text-xs">{claim.subReason}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
                           {claim.assignedTo ? (
-                            <span className="text-sm font-medium">{claim.assignedTo}</span>
+                            <span className="text-xs font-medium">{claim.assignedTo}</span>
                           ) : (
-                            <span className="text-sm text-muted-foreground italic">Sin asignar</span>
+                            <span className="text-xs text-muted-foreground italic">Sin asignar</span>
                           )}
-                        </Link>
+                </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link to={`/claims/${claim.id}`} className="block">
                           {claim.finalStatus === 'cerrado' ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-300">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-800 border border-green-300">
                               CERRADO
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300">
                               PENDIENTE
                             </span>
                           )}
@@ -607,7 +747,7 @@ const ClaimsList = () => {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+          </div>
           )}
         </CardContent>
       </Card>
