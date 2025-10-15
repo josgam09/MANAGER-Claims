@@ -47,9 +47,11 @@ const ClaimManagement = () => {
     outboundFlightDate: undefined as Date | undefined,
     outboundFlightNumber: '',
     outboundOperator: undefined as FlightOperator | undefined,
+    outboundRoute: '',
     returnFlightDate: undefined as Date | undefined,
     returnFlightNumber: '',
     returnOperator: undefined as FlightOperator | undefined,
+    returnRoute: '',
     affectedFlight: undefined as AffectedFlight | undefined,
     status: 'en-gestion' as ClaimStatus,
     priority: 'medium' as ClaimPriority,
@@ -94,9 +96,11 @@ const ClaimManagement = () => {
         outboundFlightDate: claim.outboundFlightDate ? new Date(claim.outboundFlightDate) : undefined,
         outboundFlightNumber: claim.outboundFlightNumber || '',
         outboundOperator: claim.outboundOperator,
+        outboundRoute: claim.outboundRoute || '',
         returnFlightDate: claim.returnFlightDate ? new Date(claim.returnFlightDate) : undefined,
         returnFlightNumber: claim.returnFlightNumber || '',
         returnOperator: claim.returnOperator,
+        returnRoute: claim.returnRoute || '',
         affectedFlight: claim.affectedFlight,
         status: newStatus,
         priority: claim.priority,
@@ -478,12 +482,19 @@ const ClaimManagement = () => {
                 </div>
               </div>
 
-              {/* CAMPOS DE VUELO - Aparecen si hay PNR */}
-              {formData.pnr && validatePNR(formData.pnr) && (
+              {/* CAMPOS DE VUELO - Aparecen si hay PNR válido o si el motivo es Equipaje */}
+              {((formData.pnr && validatePNR(formData.pnr)) || formData.reason === 'Equipaje') && (
                 <>
                   <Separator className="my-4" />
                   <div className="p-4 bg-sky-50 rounded-lg border-2 border-sky-200 space-y-4">
-                    <h4 className="font-semibold text-sky-900">Información de Vuelos</h4>
+                    <h4 className="font-semibold text-sky-900">
+                      Información de Vuelos
+                      {formData.reason === 'Equipaje' && !formData.pnr && (
+                        <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">
+                          Requerido para reclamos de Equipaje
+                        </span>
+                      )}
+                    </h4>
                     
                     {/* VUELO IDA */}
                     <div className="space-y-4 p-3 bg-white rounded border border-sky-300">
@@ -545,6 +556,20 @@ const ClaimManagement = () => {
                             </SelectContent>
                           </Select>
                         </div>
+                      </div>
+                      
+                      {/* Campo Tramos IDA */}
+                      <div className="space-y-2">
+                        <Label htmlFor="outboundRoute">Tramos</Label>
+                        <Input
+                          id="outboundRoute"
+                          value={formData.outboundRoute}
+                          onChange={(e) => setFormData({ ...formData, outboundRoute: e.target.value.toUpperCase() })}
+                          placeholder="Ejemplo: SCL-AEP"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Formato: ORIGEN-DESTINO (ej: SCL-AEP)
+                        </p>
                       </div>
                     </div>
 
@@ -608,6 +633,20 @@ const ClaimManagement = () => {
                             </SelectContent>
                           </Select>
                         </div>
+                      </div>
+                      
+                      {/* Campo Tramos VUELTA */}
+                      <div className="space-y-2">
+                        <Label htmlFor="returnRoute">Tramos</Label>
+                        <Input
+                          id="returnRoute"
+                          value={formData.returnRoute}
+                          onChange={(e) => setFormData({ ...formData, returnRoute: e.target.value.toUpperCase() })}
+                          placeholder="Ejemplo: AEP-SCL"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Formato: ORIGEN-DESTINO (ej: AEP-SCL)
+                        </p>
                       </div>
                     </div>
 

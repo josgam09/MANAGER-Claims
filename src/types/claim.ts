@@ -297,9 +297,11 @@ export interface Claim {
   outboundFlightDate?: Date; // Fecha de vuelo IDA
   outboundFlightNumber?: string; // Número de vuelo IDA
   outboundOperator?: FlightOperator; // Operado por IDA
+  outboundRoute?: string; // Tramos IDA (ejemplo: SCL-AEP)
   returnFlightDate?: Date; // Fecha de vuelo VUELTA
   returnFlightNumber?: string; // Número de vuelo VUELTA
   returnOperator?: FlightOperator; // Operado por VUELTA
+  returnRoute?: string; // Tramos VUELTA (ejemplo: AEP-SCL)
   affectedFlight?: AffectedFlight; // Para Cambio_de_Itinerario_y_Atrasos
   createdAt: Date;
   updatedAt: Date;
