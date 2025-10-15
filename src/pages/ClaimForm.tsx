@@ -136,25 +136,25 @@ const ClaimForm = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <Button onClick={() => navigate('/claims')} variant="outline" className="gap-2">
-        <ArrowLeft className="h-4 w-4" />
+    <div className="space-y-3 max-w-4xl mx-auto">
+      <Button onClick={() => navigate('/claims')} variant="outline" size="sm" className="gap-2">
+        <ArrowLeft className="h-3.5 w-3.5" />
         Volver
       </Button>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl">
             {isEditing ? 'Editar Información del Reclamo' : 'Nuevo Reclamo'}
           </CardTitle>
           {!isEditing && (
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-xs text-muted-foreground mt-1">
               Ingrese la información básica del reclamo. El agente asignado completará los datos del reclamante posteriormente.
             </p>
           )}
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="pt-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             {/* NIC y País en paralelo - Diseño compacto */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border-2 border-primary/20">

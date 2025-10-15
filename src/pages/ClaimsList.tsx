@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import ClaimStatusBadge from '@/components/ClaimStatusBadge';
 import ClaimPriorityBadge from '@/components/ClaimPriorityBadge';
-import { Plus, Search, Download, UserPlus, X, Filter, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Search, Download, UserPlus, X, Filter, Calendar as CalendarIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import { ClaimStatus, ClaimPriority, Country, AGENTES } from '@/types/claim';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
@@ -46,6 +46,7 @@ const ClaimsList = () => {
   const { user, hasRole } = useAuth();
   
   // Estados para filtros - La fecha es el filtro principal
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [search, setSearch] = useState('');
@@ -58,6 +59,28 @@ const ClaimsList = () => {
   const [selectedClaims, setSelectedClaims] = useState<string[]>([]);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>('');
+
+  // Contador de filtros activos
+  const activeFiltersCount = [
+    dateFilter !== 'all',
+    search !== '',
+    countryFilter !== 'all',
+    assignedToFilter !== 'all',
+    statusFilter !== 'all',
+    priorityFilter !== 'all',
+  ].filter(Boolean).length;
+
+  // Función para limpiar todos los filtros
+  const clearAllFilters = () => {
+    setDateFilter('all');
+    setDateRange(undefined);
+    setSearch('');
+    setCountryFilter('all');
+    setAssignedToFilter('all');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    toast.success('Filtros limpiados');
+  };
 
   // Primero filtrar por fecha para obtener el conjunto base
   const dateFilteredClaims = useMemo(() => {
@@ -218,11 +241,11 @@ const ClaimsList = () => {
   const canMassAssign = hasRole(['admin', 'supervisor']);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestión de Reclamos</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl font-bold tracking-tight">Gestión de Reclamos</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Administra y da seguimiento a todos los reclamos
           </p>
         </div>
@@ -252,161 +275,71 @@ const ClaimsList = () => {
         </div>
       </div>
 
-      {/* Filtros Avanzados */}
+      {/* Filtros Híbridos - Compactos */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros Avanzados
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {/* Filtro de Fecha - PRIMERO */}
-            <div className="space-y-2">
-              <Label htmlFor="dateFilter" className="text-xs font-semibold">Periodo</Label>
+        <CardContent className="pt-4 pb-3">
+          {/* Filtros Principales - Siempre Visibles */}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5 mb-3">
+            {/* Periodo */}
+            <div>
+              <Label htmlFor="dateFilter" className="text-xs font-medium mb-1.5 block">Periodo</Label>
               <Select value={dateFilter} onValueChange={(value) => {
                 setDateFilter(value as any);
-                if (value !== 'custom') {
-                  setDateRange(undefined);
-                }
+                if (value !== 'custom') setDateRange(undefined);
               }}>
-                <SelectTrigger id="dateFilter">
-                  <SelectValue placeholder="Fecha" />
+                <SelectTrigger id="dateFilter" className="h-9">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las fechas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="today">Hoy</SelectItem>
-                  <SelectItem value="week">Esta Semana</SelectItem>
-                  <SelectItem value="month">Este Mes</SelectItem>
-                  <SelectItem value="year">Este Año</SelectItem>
-                  <SelectItem value="custom">Rango Personalizado</SelectItem>
+                  <SelectItem value="week">Semana</SelectItem>
+                  <SelectItem value="month">Mes</SelectItem>
+                  <SelectItem value="year">Año</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Selector de Rango de Fechas - Aparece si se selecciona "custom" */}
-            {dateFilter === 'custom' && (
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold">Rango de Fechas</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dateRange && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange?.from ? (
-                        dateRange.to ? (
-                          <>
-                            {format(dateRange.from, "dd/MM/yyyy", { locale: es })} -{" "}
-                            {format(dateRange.to, "dd/MM/yyyy", { locale: es })}
-                          </>
-                        ) : (
-                          format(dateRange.from, "dd/MM/yyyy", { locale: es })
-                        )
-                      ) : (
-                        <span>Seleccione rango</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      initialFocus
-                      mode="range"
-                      defaultMonth={dateRange?.from}
-                      selected={dateRange}
-                      onSelect={setDateRange}
-                      numberOfMonths={2}
-                      locale={es}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-
             {/* Búsqueda */}
-            <div className="space-y-2">
-              <Label htmlFor="search" className="text-xs font-semibold">Buscar</Label>
+            <div>
+              <Label htmlFor="search" className="text-xs font-medium mb-1.5 block">Buscar</Label>
               <Input
                 id="search"
-                placeholder="NIC, asunto, reclamante..."
+                placeholder="NIC, asunto..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                className="h-9"
               />
             </div>
 
-            {/* Filtro de País */}
-            <div className="space-y-2">
-              <Label htmlFor="countryFilter" className="text-xs font-semibold">País</Label>
-              <Select value={countryFilter} onValueChange={(value) => setCountryFilter(value as Country | 'all')}>
-                <SelectTrigger id="countryFilter">
-                  <SelectValue placeholder="País" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los países</SelectItem>
-                  <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
-                  <SelectItem value="BR">🇧🇷 Brasil</SelectItem>
-                  <SelectItem value="CL">🇨🇱 Chile</SelectItem>
-                  <SelectItem value="CO">🇨🇴 Colombia</SelectItem>
-                  <SelectItem value="EC">🇪🇨 Ecuador</SelectItem>
-                  <SelectItem value="PY">🇵🇾 Paraguay</SelectItem>
-                  <SelectItem value="PE">🇵🇪 Perú</SelectItem>
-                  <SelectItem value="RD">🇩🇴 Rep. Dominicana</SelectItem>
-                  <SelectItem value="UY">🇺🇾 Uruguay</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Filtro de Asignado a */}
-            <div className="space-y-2">
-              <Label htmlFor="assignedToFilter" className="text-xs font-semibold">Asignado a</Label>
-              <Select value={assignedToFilter} onValueChange={(value) => setAssignedToFilter(value)}>
-                <SelectTrigger id="assignedToFilter">
-                  <SelectValue placeholder="Agente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los agentes</SelectItem>
-                  <SelectItem value="sin-asignar">Sin asignar</SelectItem>
-                  {AGENTES.map((agente) => (
-                    <SelectItem key={agente} value={agente}>
-                      {agente}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Filtro de Estado */}
-            <div className="space-y-2">
-              <Label htmlFor="statusFilter" className="text-xs font-semibold">Estado</Label>
+            {/* Estado */}
+            <div>
+              <Label htmlFor="statusFilter" className="text-xs font-medium mb-1.5 block">Estado</Label>
               <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ClaimStatus | 'all')}>
-                <SelectTrigger id="statusFilter">
-                  <SelectValue placeholder="Estado" />
+                <SelectTrigger id="statusFilter" className="h-9">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="new">Nuevo</SelectItem>
                   <SelectItem value="en-gestion">En Gestión</SelectItem>
-                <SelectItem value="escalado">Escalado</SelectItem>
-                <SelectItem value="enviado-abogados">Enviado a Abogados</SelectItem>
-                <SelectItem value="para-cierre">Para Cierre</SelectItem>
-              </SelectContent>
-            </Select>
+                  <SelectItem value="escalado">Escalado</SelectItem>
+                  <SelectItem value="enviado-abogados">Abogados</SelectItem>
+                  <SelectItem value="para-cierre">Para Cierre</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Filtro de Prioridad */}
-            <div className="space-y-2">
-              <Label htmlFor="priorityFilter" className="text-xs font-semibold">Prioridad</Label>
+            {/* Prioridad */}
+            <div>
+              <Label htmlFor="priorityFilter" className="text-xs font-medium mb-1.5 block">Prioridad</Label>
               <Select value={priorityFilter} onValueChange={(value) => setPriorityFilter(value as ClaimPriority | 'all')}>
-                <SelectTrigger id="priorityFilter">
-                  <SelectValue placeholder="Prioridad" />
+                <SelectTrigger id="priorityFilter" className="h-9">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las prioridades</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="critical">Crítica</SelectItem>
                   <SelectItem value="high">Alta</SelectItem>
                   <SelectItem value="medium">Media</SelectItem>
@@ -414,25 +347,123 @@ const ClaimsList = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Botón Filtros Avanzados + Limpiar */}
+            <div className="flex gap-2 items-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="flex-1 h-9"
+              >
+                <Filter className="h-3.5 w-3.5 mr-1.5" />
+                Más
+                {activeFiltersCount > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
+                    {activeFiltersCount}
+                  </span>
+                )}
+                {showAdvancedFilters ? <ChevronUp className="ml-1.5 h-3.5 w-3.5" /> : <ChevronDown className="ml-1.5 h-3.5 w-3.5" />}
+              </Button>
+              {activeFiltersCount > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="h-9 px-2"
+                  title="Limpiar filtros"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
 
-          {/* Indicador de registros filtrados */}
-          <div className="mt-4 pt-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              Mostrando <span className="font-semibold text-foreground">{filteredClaims.length}</span> de{' '}
-              <span className="font-semibold">{dateFilteredClaims.length}</span> reclamos
-              {dateFilter !== 'all' && (
-                <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  Filtrado por fecha
-                </span>
-              )}
-            </p>
-          </div>
+          {/* Rango de Fechas Personalizado */}
+          {dateFilter === 'custom' && (
+            <div className="mb-3 pb-3 border-b">
+              <Label className="text-xs font-medium mb-1.5 block">Rango de Fechas</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("h-9 justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>{format(dateRange.from, "dd/MM/yy", { locale: es })} - {format(dateRange.to, "dd/MM/yy", { locale: es })}</>
+                      ) : format(dateRange.from, "dd/MM/yy", { locale: es })
+                    ) : <span>Seleccione rango</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
+          {/* Filtros Avanzados - Colapsables */}
+          {showAdvancedFilters && (
+            <div className="pt-3 border-t">
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                {/* País */}
+                <div>
+                  <Label htmlFor="countryFilter" className="text-xs font-medium mb-1.5 block">País</Label>
+                  <Select value={countryFilter} onValueChange={(value) => setCountryFilter(value as Country | 'all')}>
+                    <SelectTrigger id="countryFilter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
+                      <SelectItem value="BR">🇧🇷 Brasil</SelectItem>
+                      <SelectItem value="CL">🇨🇱 Chile</SelectItem>
+                      <SelectItem value="CO">🇨🇴 Colombia</SelectItem>
+                      <SelectItem value="EC">🇪🇨 Ecuador</SelectItem>
+                      <SelectItem value="PY">🇵🇾 Paraguay</SelectItem>
+                      <SelectItem value="PE">🇵🇪 Perú</SelectItem>
+                      <SelectItem value="RD">🇩🇴 RD</SelectItem>
+                      <SelectItem value="UY">🇺🇾 Uruguay</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Asignado a */}
+                <div>
+                  <Label htmlFor="assignedToFilter" className="text-xs font-medium mb-1.5 block">Asignado a</Label>
+                  <Select value={assignedToFilter} onValueChange={(value) => setAssignedToFilter(value)}>
+                    <SelectTrigger id="assignedToFilter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="sin-asignar">Sin asignar</SelectItem>
+                      {AGENTES.map((agente) => (
+                        <SelectItem key={agente} value={agente}>
+                          {agente}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               {canMassAssign && filteredClaims.length > 0 && (

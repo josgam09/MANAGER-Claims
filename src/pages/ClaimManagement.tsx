@@ -158,17 +158,6 @@ const ClaimManagement = () => {
       return;
     }
 
-    // Validación obligatoria de Motivos y Sub Motivos en gestión
-    if (!formData.reason) {
-      toast.error('El Motivo es obligatorio en la gestión del reclamo');
-      return;
-    }
-
-    if (!formData.subReason) {
-      toast.error('El Sub Motivo es obligatorio en la gestión del reclamo');
-      return;
-    }
-
     // Validación de PNR
     if (formData.pnr && !validatePNR(formData.pnr)) {
       toast.error('El PNR debe tener 6 caracteres alfanuméricos, comenzando y terminando con una letra');
@@ -276,28 +265,28 @@ const ClaimManagement = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <Button onClick={() => navigate(`/claims/${id}`)} variant="outline" className="gap-2">
-        <ArrowLeft className="h-4 w-4" />
+    <div className="space-y-3 max-w-4xl mx-auto">
+      <Button onClick={() => navigate(`/claims/${id}`)} variant="outline" size="sm" className="gap-2">
+        <ArrowLeft className="h-3.5 w-3.5" />
         Volver al Detalle
       </Button>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <UserCheck className="h-8 w-8 text-primary" />
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-5 w-5 text-primary" />
             <div>
-              <CardTitle className="text-2xl">Gestión de Reclamo</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <CardTitle className="text-xl">Gestión de Reclamo</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Complete la información del reclamante y gestione el estado del caso
               </p>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {/* Banner con info del reclamo */}
-          <div className="p-4 bg-muted rounded-lg mb-6">
-            <div className="grid gap-2 text-sm">
+          <div className="p-3 bg-muted rounded-lg mb-4">
+            <div className="grid gap-1.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">N° Reclamo:</span>
                 <span className="font-mono font-bold text-primary">{claim.claimNumber}</span>
@@ -317,9 +306,9 @@ const ClaimManagement = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Información del Reclamante</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-3">
+              <h3 className="text-base font-semibold">Información del Reclamante</h3>
               
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -371,9 +360,9 @@ const ClaimManagement = () => {
             </div>
 
             {/* CATEGORIZACIÓN DEL RECLAMO */}
-            <Separator className="my-6" />
+            <Separator className="my-4" />
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Categorización del Reclamo</h3>
+              <h3 className="text-base font-semibold">Categorización del Reclamo</h3>
               
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -441,9 +430,9 @@ const ClaimManagement = () => {
             </div>
 
             {/* PNR Y FECHA INICIAL */}
-            <Separator className="my-6" />
+            <Separator className="my-4" />
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Datos del Reclamo y Vuelo</h3>
+              <h3 className="text-base font-semibold">Datos del Reclamo y Vuelo</h3>
               
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -646,9 +635,9 @@ const ClaimManagement = () => {
               )}
             </div>
 
-            <Separator className="my-6" />
+            <Separator className="my-4" />
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Estado y Gestión</h3>
+              <h3 className="text-base font-semibold">Estado y Gestión</h3>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -795,7 +784,7 @@ const ClaimManagement = () => {
 
             {/* ESTADO FINAL */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Estado Final del Caso</h3>
+              <h3 className="text-base font-semibold">Estado Final del Caso</h3>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="finalStatus">Estado Final *</Label>
@@ -842,9 +831,9 @@ const ClaimManagement = () => {
             {/* COMPENSACIÓN */}
             {formData.finalStatus === 'cerrado' && (
               <>
-                <Separator className="my-6" />
+                <Separator className="my-4" />
                 <div className="space-y-4 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                  <h3 className="text-lg font-semibold text-blue-900">Información de Cierre</h3>
+                  <h3 className="text-base font-semibold text-blue-900">Información de Cierre</h3>
                   
                   {/* ¿Se compensó? */}
                   <div className="space-y-3">

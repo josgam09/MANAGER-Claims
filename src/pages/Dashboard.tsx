@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { AlertCircle, CheckCircle, Clock, TrendingUp, Plus, Download, Filter, Calendar as CalendarIcon, PieChart as PieChartIcon, BarChart as BarChartIcon } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, TrendingUp, Plus, Download, Filter, Calendar as CalendarIcon, PieChart as PieChartIcon, BarChart as BarChartIcon, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ClaimStatus, ClaimPriority, ClaimReason, ClaimType, Country, SUB_MOTIVOS_BY_MOTIVO, ORGANISMOS_BY_COUNTRY, AGENTES } from '@/types/claim';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, format } from 'date-fns';
@@ -32,12 +32,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const { claims } = useClaims();
   const { user, hasRole } = useAuth();
 
   // Estados para filtros
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClaimStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<ClaimPriority | 'all'>('all');
@@ -50,6 +52,38 @@ const Dashboard = () => {
   const [reasonFilter, setReasonFilter] = useState<ClaimReason | 'all'>('all');
   const [subReasonFilter, setSubReasonFilter] = useState<string>('all');
   const [routeFilter, setRouteFilter] = useState<'all' | 'IDA' | 'VUELTA'>('all');
+
+  // Contador de filtros activos
+  const activeFiltersCount = [
+    dateFilter !== 'all',
+    search !== '',
+    statusFilter !== 'all',
+    priorityFilter !== 'all',
+    countryFilter !== 'all',
+    claimTypeFilter !== 'all',
+    organizationFilter !== 'all',
+    assignedToFilter !== 'all',
+    reasonFilter !== 'all',
+    subReasonFilter !== 'all',
+    routeFilter !== 'all',
+  ].filter(Boolean).length;
+
+  // Función para limpiar todos los filtros
+  const clearAllFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setDateFilter('all');
+    setDateRange(undefined);
+    setCountryFilter('all');
+    setClaimTypeFilter('all');
+    setOrganizationFilter('all');
+    setAssignedToFilter('all');
+    setReasonFilter('all');
+    setSubReasonFilter('all');
+    setRouteFilter('all');
+    toast.success('Filtros limpiados');
+  };
 
   // Filtrar casos según el rol
   const claimsToShow = hasRole(['analyst']) && user
@@ -325,11 +359,11 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {hasRole(['analyst']) 
               ? `Tus casos asignados - ${user?.name}`
               : hasRole(['supervisor'])
@@ -378,126 +412,71 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Filtros Avanzados */}
-        <Card>
-          <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filtros Avanzados
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={exportToCSV} className="gap-2">
-              <Download className="h-4 w-4" />
-              Exportar CSV
-            </Button>
-          </div>
-          </CardHeader>
-          <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Filtros Híbridos - Compactos */}
+      <Card>
+        <CardContent className="pt-4 pb-3">
+          {/* Filtros Principales - Siempre Visibles */}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5 mb-3">
+            {/* Periodo */}
+            <div>
+              <Label htmlFor="dateFilter" className="text-xs font-medium mb-1.5 block">Periodo</Label>
+              <Select value={dateFilter} onValueChange={(value) => {
+                setDateFilter(value as any);
+                if (value !== 'custom') setDateRange(undefined);
+              }}>
+                <SelectTrigger id="dateFilter" className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="today">Hoy</SelectItem>
+                  <SelectItem value="week">Semana</SelectItem>
+                  <SelectItem value="month">Mes</SelectItem>
+                  <SelectItem value="year">Año</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Búsqueda */}
-            <div className="space-y-2">
-              <Label htmlFor="search" className="text-xs font-semibold">Buscar</Label>
+            <div>
+              <Label htmlFor="search" className="text-xs font-medium mb-1.5 block">Buscar</Label>
               <Input
                 id="search"
-                placeholder="NIC, asunto, reclamante..."
+                placeholder="NIC, asunto..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                className="h-9"
               />
             </div>
 
-            {/* Filtro de Fecha */}
-            <div className="space-y-2">
-              <Label htmlFor="dateFilter" className="text-xs font-semibold">Periodo</Label>
-              <Select value={dateFilter} onValueChange={(value) => {
-                setDateFilter(value as any);
-                if (value !== 'custom') {
-                  setDateRange(undefined);
-                }
-              }}>
-                <SelectTrigger id="dateFilter">
-                  <SelectValue placeholder="Fecha" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las fechas</SelectItem>
-                  <SelectItem value="today">Hoy</SelectItem>
-                  <SelectItem value="week">Esta Semana</SelectItem>
-                  <SelectItem value="month">Este Mes</SelectItem>
-                  <SelectItem value="year">Este Año</SelectItem>
-                  <SelectItem value="custom">Rango Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
-                </div>
-
-            {/* Selector de Rango de Fechas - Aparece si se selecciona "custom" */}
-            {dateFilter === 'custom' && (
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold">Rango de Fechas</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dateRange && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange?.from ? (
-                        dateRange.to ? (
-                          <>
-                            {format(dateRange.from, "dd/MM/yyyy", { locale: es })} -{" "}
-                            {format(dateRange.to, "dd/MM/yyyy", { locale: es })}
-                          </>
-                        ) : (
-                          format(dateRange.from, "dd/MM/yyyy", { locale: es })
-                        )
-                      ) : (
-                        <span>Seleccione rango</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      initialFocus
-                      mode="range"
-                      defaultMonth={dateRange?.from}
-                      selected={dateRange}
-                      onSelect={setDateRange}
-                      numberOfMonths={2}
-                      locale={es}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-
-            {/* Filtro de Estado */}
-            <div className="space-y-2">
-              <Label htmlFor="statusFilter" className="text-xs font-semibold">Estado</Label>
+            {/* Estado */}
+            <div>
+              <Label htmlFor="statusFilter" className="text-xs font-medium mb-1.5 block">Estado</Label>
               <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ClaimStatus | 'all')}>
-                <SelectTrigger id="statusFilter">
-                  <SelectValue placeholder="Estado" />
+                <SelectTrigger id="statusFilter" className="h-9">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="new">Nuevo</SelectItem>
                   <SelectItem value="en-gestion">En Gestión</SelectItem>
                   <SelectItem value="escalado">Escalado</SelectItem>
-                  <SelectItem value="enviado-abogados">Enviado a Abogados</SelectItem>
+                  <SelectItem value="enviado-abogados">Abogados</SelectItem>
                   <SelectItem value="para-cierre">Para Cierre</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Filtro de Prioridad */}
-            <div className="space-y-2">
-              <Label htmlFor="priorityFilter" className="text-xs font-semibold">Prioridad</Label>
+            {/* Prioridad */}
+            <div>
+              <Label htmlFor="priorityFilter" className="text-xs font-medium mb-1.5 block">Prioridad</Label>
               <Select value={priorityFilter} onValueChange={(value) => setPriorityFilter(value as ClaimPriority | 'all')}>
-                <SelectTrigger id="priorityFilter">
-                  <SelectValue placeholder="Prioridad" />
+                <SelectTrigger id="priorityFilter" className="h-9">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las prioridades</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="critical">Crítica</SelectItem>
                   <SelectItem value="high">Alta</SelectItem>
                   <SelectItem value="medium">Media</SelectItem>
@@ -506,181 +485,255 @@ const Dashboard = () => {
               </Select>
             </div>
 
-            {/* Filtro de País */}
-            <div className="space-y-2">
-              <Label htmlFor="countryFilter" className="text-xs font-semibold">País</Label>
-              <Select value={countryFilter} onValueChange={(value) => {
-                setCountryFilter(value as Country | 'all');
-                setOrganizationFilter('all');
-              }}>
-                <SelectTrigger id="countryFilter">
-                  <SelectValue placeholder="País" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los países</SelectItem>
-                  <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
-                  <SelectItem value="BR">🇧🇷 Brasil</SelectItem>
-                  <SelectItem value="CL">🇨🇱 Chile</SelectItem>
-                  <SelectItem value="CO">🇨🇴 Colombia</SelectItem>
-                  <SelectItem value="EC">🇪🇨 Ecuador</SelectItem>
-                  <SelectItem value="PY">🇵🇾 Paraguay</SelectItem>
-                  <SelectItem value="PE">🇵🇪 Perú</SelectItem>
-                  <SelectItem value="RD">🇩🇴 Rep. Dominicana</SelectItem>
-                  <SelectItem value="UY">🇺🇾 Uruguay</SelectItem>
-                </SelectContent>
-              </Select>
-                </div>
-
-            {/* Filtro de Tipo de Claim */}
-            <div className="space-y-2">
-              <Label htmlFor="claimTypeFilter" className="text-xs font-semibold">Tipo de Claim</Label>
-              <Select value={claimTypeFilter} onValueChange={(value) => {
-                setClaimTypeFilter(value as ClaimType | 'all');
-                setOrganizationFilter('all');
-              }}>
-                <SelectTrigger id="claimTypeFilter">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los tipos</SelectItem>
-                  <SelectItem value="empresa">EMPRESA</SelectItem>
-                  <SelectItem value="legal">LEGAL</SelectItem>
-                  <SelectItem value="official">OFFICIAL</SelectItem>
-                </SelectContent>
-              </Select>
-              </div>
-
-            {/* Filtro de Organismo */}
-            <div className="space-y-2">
-              <Label htmlFor="organizationFilter" className="text-xs font-semibold">Organismo</Label>
-              <Select 
-                value={organizationFilter} 
-                onValueChange={(value) => setOrganizationFilter(value)}
-                disabled={countryFilter === 'all' && claimTypeFilter === 'all'}
+            {/* Botón Filtros Avanzados + Limpiar */}
+            <div className="flex gap-2 items-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="flex-1 h-9"
               >
-                <SelectTrigger id="organizationFilter">
-                  <SelectValue placeholder="Organismo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los organismos</SelectItem>
-                  {availableOrganizations.map((org) => (
-                    <SelectItem key={org} value={org}>
-                      {org}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {availableOrganizations.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {availableOrganizations.length} disponible(s)
-                </p>
+                <Filter className="h-3.5 w-3.5 mr-1.5" />
+                Más
+                {activeFiltersCount > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
+                    {activeFiltersCount}
+                  </span>
+                )}
+                {showAdvancedFilters ? <ChevronUp className="ml-1.5 h-3.5 w-3.5" /> : <ChevronDown className="ml-1.5 h-3.5 w-3.5" />}
+              </Button>
+              {activeFiltersCount > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="h-9 px-2"
+                  title="Limpiar filtros"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               )}
-                </div>
-
-            {/* Filtro de Motivo */}
-            <div className="space-y-2">
-              <Label htmlFor="reasonFilter" className="text-xs font-semibold">Motivo</Label>
-              <Select value={reasonFilter} onValueChange={(value) => {
-                setReasonFilter(value as ClaimReason | 'all');
-                setSubReasonFilter('all');
-              }}>
-                <SelectTrigger id="reasonFilter">
-                  <SelectValue placeholder="Motivo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los motivos</SelectItem>
-                  <SelectItem value="Aeropuerto">Aeropuerto</SelectItem>
-                  <SelectItem value="American_Airlines">American Airlines</SelectItem>
-                  <SelectItem value="Cambio_de_Itinerario_y_Atrasos">Cambio de Itinerario</SelectItem>
-                  <SelectItem value="Cesion_y_Retracto">Cesión y Retracto</SelectItem>
-                  <SelectItem value="Club_de_Descuento">Club de Descuento</SelectItem>
-                  <SelectItem value="Crisis_Social">Crisis Social</SelectItem>
-                  <SelectItem value="Devoluciones">Devoluciones</SelectItem>
-                  <SelectItem value="Equipaje">Equipaje</SelectItem>
-                  <SelectItem value="Error_en_Compra">Error en Compra</SelectItem>
-                  <SelectItem value="Gift_Card">Gift Card</SelectItem>
-                  <SelectItem value="Impedimento_Médico">Impedimento Médico</SelectItem>
-                  <SelectItem value="Norwegian">Norwegian</SelectItem>
-                  <SelectItem value="PVC_SERNAC">PVC SERNAC</SelectItem>
-                  <SelectItem value="Servicios_Opcionales">Servicios Opcionales</SelectItem>
-                  <SelectItem value="Sitio_Web">Sitio Web</SelectItem>
-                  <SelectItem value="Validación_de_Compra">Validación de Compra</SelectItem>
-                </SelectContent>
-              </Select>
-              </div>
-
-            {/* Filtro de Sub Motivo */}
-            <div className="space-y-2">
-              <Label htmlFor="subReasonFilter" className="text-xs font-semibold">Sub Motivo</Label>
-              <Select 
-                value={subReasonFilter} 
-                onValueChange={(value) => setSubReasonFilter(value)}
-                disabled={reasonFilter === 'all'}
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={exportToCSV}
+                className="h-9 px-2"
+                title="Exportar CSV"
               >
-                <SelectTrigger id="subReasonFilter">
-                  <SelectValue placeholder="Sub Motivo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los sub motivos</SelectItem>
-                  {availableSubReasons.map((subReason) => (
-                    <SelectItem key={subReason} value={subReason}>
-                      {subReason}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-                </div>
-
-            {/* Filtro de Asignado a */}
-            <div className="space-y-2">
-              <Label htmlFor="assignedToFilter" className="text-xs font-semibold">Asignado a</Label>
-              <Select value={assignedToFilter} onValueChange={(value) => setAssignedToFilter(value)}>
-                <SelectTrigger id="assignedToFilter">
-                  <SelectValue placeholder="Agente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los agentes</SelectItem>
-                  <SelectItem value="sin-asignar">Sin asignar</SelectItem>
-                  {AGENTES.map((agente) => (
-                    <SelectItem key={agente} value={agente}>
-                      {agente}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              </div>
-
-            {/* Filtro de Ruta */}
-            <div className="space-y-2">
-              <Label htmlFor="routeFilter" className="text-xs font-semibold">Ruta</Label>
-              <Select value={routeFilter} onValueChange={(value) => setRouteFilter(value as any)}>
-                <SelectTrigger id="routeFilter">
-                  <SelectValue placeholder="Ruta" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las rutas</SelectItem>
-                  <SelectItem value="IDA">Solo IDA</SelectItem>
-                  <SelectItem value="VUELTA">Solo VUELTA</SelectItem>
-                </SelectContent>
-              </Select>
+                <Download className="h-4 w-4" />
+              </Button>
             </div>
           </div>
+
+          {/* Rango de Fechas Personalizado - Aparece si es necesario */}
+          {dateFilter === 'custom' && (
+            <div className="mb-3 pb-3 border-b">
+              <Label className="text-xs font-medium mb-1.5 block">Rango de Fechas</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("h-9 justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>{format(dateRange.from, "dd/MM/yy", { locale: es })} - {format(dateRange.to, "dd/MM/yy", { locale: es })}</>
+                      ) : format(dateRange.from, "dd/MM/yy", { locale: es })
+                    ) : <span>Seleccione rango</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
+          {/* Filtros Avanzados - Colapsables */}
+          {showAdvancedFilters && (
+            <div className="pt-3 border-t">
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                {/* País */}
+                <div>
+                  <Label htmlFor="countryFilter" className="text-xs font-medium mb-1.5 block">País</Label>
+                  <Select value={countryFilter} onValueChange={(value) => {
+                    setCountryFilter(value as Country | 'all');
+                    setOrganizationFilter('all');
+                  }}>
+                    <SelectTrigger id="countryFilter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
+                      <SelectItem value="BR">🇧🇷 Brasil</SelectItem>
+                      <SelectItem value="CL">🇨🇱 Chile</SelectItem>
+                      <SelectItem value="CO">🇨🇴 Colombia</SelectItem>
+                      <SelectItem value="EC">🇪🇨 Ecuador</SelectItem>
+                      <SelectItem value="PY">🇵🇾 Paraguay</SelectItem>
+                      <SelectItem value="PE">🇵🇪 Perú</SelectItem>
+                      <SelectItem value="RD">🇩🇴 RD</SelectItem>
+                      <SelectItem value="UY">🇺🇾 Uruguay</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Tipo de Claim */}
+                <div>
+                  <Label htmlFor="claimTypeFilter" className="text-xs font-medium mb-1.5 block">Tipo</Label>
+                  <Select value={claimTypeFilter} onValueChange={(value) => {
+                    setClaimTypeFilter(value as ClaimType | 'all');
+                    setOrganizationFilter('all');
+                  }}>
+                    <SelectTrigger id="claimTypeFilter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="empresa">EMPRESA</SelectItem>
+                      <SelectItem value="legal">LEGAL</SelectItem>
+                      <SelectItem value="official">OFFICIAL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Organismo */}
+                <div>
+                  <Label htmlFor="organizationFilter" className="text-xs font-medium mb-1.5 block">Organismo</Label>
+                  <Select 
+                    value={organizationFilter} 
+                    onValueChange={(value) => setOrganizationFilter(value)}
+                    disabled={countryFilter === 'all' && claimTypeFilter === 'all'}
+                  >
+                    <SelectTrigger id="organizationFilter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {availableOrganizations.map((org) => (
+                        <SelectItem key={org} value={org}>
+                          {org}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Asignado a */}
+                <div>
+                  <Label htmlFor="assignedToFilter" className="text-xs font-medium mb-1.5 block">Asignado a</Label>
+                  <Select value={assignedToFilter} onValueChange={(value) => setAssignedToFilter(value)}>
+                    <SelectTrigger id="assignedToFilter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="sin-asignar">Sin asignar</SelectItem>
+                      {AGENTES.map((agente) => (
+                        <SelectItem key={agente} value={agente}>
+                          {agente}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Motivo */}
+                <div>
+                  <Label htmlFor="reasonFilter" className="text-xs font-medium mb-1.5 block">Motivo</Label>
+                  <Select value={reasonFilter} onValueChange={(value) => {
+                    setReasonFilter(value as ClaimReason | 'all');
+                    setSubReasonFilter('all');
+                  }}>
+                    <SelectTrigger id="reasonFilter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="Aeropuerto">Aeropuerto</SelectItem>
+                      <SelectItem value="American_Airlines">American Airlines</SelectItem>
+                      <SelectItem value="Cambio_de_Itinerario_y_Atrasos">Cambio Itinerario</SelectItem>
+                      <SelectItem value="Cesion_y_Retracto">Cesión</SelectItem>
+                      <SelectItem value="Club_de_Descuento">Club Descuento</SelectItem>
+                      <SelectItem value="Crisis_Social">Crisis Social</SelectItem>
+                      <SelectItem value="Devoluciones">Devoluciones</SelectItem>
+                      <SelectItem value="Equipaje">Equipaje</SelectItem>
+                      <SelectItem value="Error_en_Compra">Error Compra</SelectItem>
+                      <SelectItem value="Gift_Card">Gift Card</SelectItem>
+                      <SelectItem value="Impedimento_Médico">Imp. Médico</SelectItem>
+                      <SelectItem value="Norwegian">Norwegian</SelectItem>
+                      <SelectItem value="PVC_SERNAC">PVC SERNAC</SelectItem>
+                      <SelectItem value="Servicios_Opcionales">Servicios</SelectItem>
+                      <SelectItem value="Sitio_Web">Sitio Web</SelectItem>
+                      <SelectItem value="Validación_de_Compra">Validación</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Sub Motivo */}
+                <div>
+                  <Label htmlFor="subReasonFilter" className="text-xs font-medium mb-1.5 block">Sub Motivo</Label>
+                  <Select 
+                    value={subReasonFilter} 
+                    onValueChange={(value) => setSubReasonFilter(value)}
+                    disabled={reasonFilter === 'all'}
+                  >
+                    <SelectTrigger id="subReasonFilter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {availableSubReasons.map((subReason) => (
+                        <SelectItem key={subReason} value={subReason}>
+                          {subReason}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Ruta */}
+                <div>
+                  <Label htmlFor="routeFilter" className="text-xs font-medium mb-1.5 block">Ruta</Label>
+                  <Select value={routeFilter} onValueChange={(value) => setRouteFilter(value as any)}>
+                    <SelectTrigger id="routeFilter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="IDA">IDA</SelectItem>
+                      <SelectItem value="VUELTA">VUELTA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Gráficos - Solo para Admin y Supervisor */}
       {hasRole(['admin', 'supervisor']) && filteredClaims.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Gráfico de Torta - Claims por País */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <PieChartIcon className="h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <PieChartIcon className="h-4 w-4" />
                 Claims por País
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="pt-0">
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie
                     data={countryChartData}
@@ -704,14 +757,14 @@ const Dashboard = () => {
 
           {/* Gráfico de Barras Agrupadas - Por Asignado a */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BarChartIcon className="h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BarChartIcon className="h-4 w-4" />
                 Claims por Agente
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="pt-0">
+              <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={assignedToChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="agent" angle={-45} textAnchor="end" height={100} fontSize={11} />
@@ -727,15 +780,15 @@ const Dashboard = () => {
         </Card>
 
           {/* Gráfico de Barras Apiladas - Por Motivos */}
-        <Card>
-          <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BarChartIcon className="h-5 w-5" />
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BarChartIcon className="h-4 w-4" />
                 Claims por Motivo
               </CardTitle>
-          </CardHeader>
-          <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={reasonChartData} layout="horizontal">
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
@@ -768,14 +821,12 @@ const Dashboard = () => {
 
       {/* Tabla de Reclamos */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>
-              Listado de Reclamos ({filteredClaims.length})
-            </CardTitle>
-          </div>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">
+            Listado de Reclamos ({filteredClaims.length})
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
