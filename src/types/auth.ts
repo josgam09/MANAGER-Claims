@@ -17,3 +17,4 @@ export interface AuthContextType {
   hasRole: (roles: UserRole[]) => boolean;
 }
 
+

@@ -16,14 +16,14 @@ cd /d "%~dp0"
 
 REM Configurar variables de entorno
 set BROWSER=none
-set PORT=8080
+set PORT=8081
 
 echo.
-echo Iniciando servidor en puerto 8080...
+echo Iniciando servidor en puerto 8081...
 echo.
 echo ========================================
 echo   Accede a la plataforma en:
-echo   http://localhost:8080
+echo   http://localhost:8081
 echo ========================================
 echo.
 echo Presiona Ctrl+C para detener el servidor
@@ -33,4 +33,6 @@ REM Iniciar el servidor de desarrollo
 npm run dev
 
 pause
+
+
 
