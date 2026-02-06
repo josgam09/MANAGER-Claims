@@ -2,6 +2,7 @@ import { useClaims } from '@/contexts/ClaimContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo, useState } from 'react';
 import StatCard from '@/components/StatCard';
+import CaricatureCard from '@/components/CaricatureCard';
 import ClaimStatusBadge from '@/components/ClaimStatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -455,6 +456,8 @@ const Dashboard = () => {
         </Link>
         )}
       </div>
+
+      <CaricatureCard />
 
       {/* Estadísticas Compactas */}
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
